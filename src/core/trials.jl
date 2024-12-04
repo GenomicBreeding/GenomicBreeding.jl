@@ -64,7 +64,7 @@ false
 ```
 """
 function check(trials::Trials)::Bool
-    n, t = size(trials .phenotypes)
+    n, t = size(trials.phenotypes)
     if (t != length(trials.traits)) ||
        (n != length(trials.years)) ||
        (n != length(trials.seasons)) ||
