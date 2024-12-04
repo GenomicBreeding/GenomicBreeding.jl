@@ -54,7 +54,7 @@ julia> trials = Trials(n=1, t=2);
 
 julia> trials.entries = ["entry_1"];
 
-julia> trials.check()
+julia> check(trials)
 true
 
 julia> trials.entries = ["entering_2_entries", "instead_of_just_1"];
