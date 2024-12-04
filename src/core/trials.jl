@@ -49,7 +49,7 @@ end
 Check dimension compatibility of the fields of the Trials struct
 
 # Examples
-# ```jldoctest; setup = :(using GenomicBreeding)
+```jldoctest; setup = :(using GenomicBreeding)
 julia> trials = Trials(n=1, t=2);
 
 julia> trials.entries = ["entry_1"];
