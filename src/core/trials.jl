@@ -30,7 +30,7 @@ mutable struct Trials
     phenotypes::Array{Union{Real,Missing},2}
     function Trials(; n::Int = 2, t::Int = 2)
         new(
-            Array{String,1}(undef, n),
+            Array{String,1}(undef, t),
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
@@ -63,19 +63,19 @@ julia> check(trials)
 false
 ```
 """
-function check(y::Trials)::Bool
-    n, p = size(y.phenotypes)
-    if (p != length(y.traits)) ||
-       (n != length(years)) ||
-       (n != length(seasons)) ||
-       (n != length(harvests)) ||
-       (n != length(sites)) ||
-       (n != length(populations)) ||
-       (n != length(replications)) ||
-       (n != length(blocks)) ||
-       (n != length(rows)) ||
-       (n != length(cols)) ||
-       (n != length(y.entries))
+function check(trials::Trials)::Bool
+    n, t = size(trials .phenotypes)
+    if (t != length(trials.traits)) ||
+       (n != length(trials.years)) ||
+       (n != length(trials.seasons)) ||
+       (n != length(trials.harvests)) ||
+       (n != length(trials.sites)) ||
+       (n != length(trials.populations)) ||
+       (n != length(trials.replications)) ||
+       (n != length(trials.blocks)) ||
+       (n != length(trials.rows)) ||
+       (n != length(trials.cols)) ||
+       (n != length(trials.entries))
         return false
     end
     return true
