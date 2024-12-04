@@ -1,0 +1,10 @@
+using Pkg, Test, Documenter
+Pkg.activate(".")
+using GenomicBreeding
+
+Documenter.doctest(GenomicBreeding)
+
+@testset "GenomicBreeding.jl" begin
+    genomes::Genomes = simulategenomes(verbose=false)
+    @test isa(genomes, Genomes)
+end
