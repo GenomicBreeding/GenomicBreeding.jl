@@ -17,19 +17,21 @@ julia> fieldnames(Trials)
 ```
 """
 mutable struct Trials
+    phenotypes::Array{Union{Real,Missing},2}
     traits::Array{String,1}
     years::Array{String,1}
     seasons::Array{String,1}
     harvests::Array{String,1}
     sites::Array{String,1}
-    populations::Array{String,1}
     replications::Array{String,1}
+    blocks::Array{String,1}
     rows::Array{String,1}
     cols::Array{String,1}
     entries::Array{String,1}
-    phenotypes::Array{Union{Real,Missing},2}
+    populations::Array{String,1}
     function Trials(; n::Int = 2, t::Int = 2)
         new(
+            Array{Real,2}(undef, n, t),
             Array{String,1}(undef, t),
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
@@ -40,7 +42,7 @@ mutable struct Trials
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
-            Array{Real,2}(undef, n, t),
+            Array{String,1}(undef, n),
         )
     end
 end

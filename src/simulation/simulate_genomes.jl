@@ -26,7 +26,7 @@ Simulate genomes
 
 # Examples
 ```jldoctest; setup = :(using GenomicBreeding, StatsBase)
-julia> genomes = simulategenomes(n=100, p=10_000, n_alleles=3, verbose=false);
+julia> genomes = simulategenomes(n=100, p=10_000, n_alleles=3);
 
 julia> length(genomes.entries)
 100
@@ -56,7 +56,7 @@ function simulategenomes(;
     max_pos::Int = 135_000_000,
     ld_corr_50perc_kb::Int = 100_000,
     seed::Int = 42,
-    verbose::Bool = true,
+    verbose::Bool = false,
 )::Genomes
     # n::Int=100;p::Int=10_000;n_chroms::Int=7;n_alleles::Int=3; max_pos::Int=135_000_000; ld_corr_50perc_kb::Int=1e6; seed::Int=42; verbose::Bool=true;
     # Parameter checks
@@ -154,7 +154,10 @@ function simulategenomes(;
     allele_frequencies::Array{Union{Real,Missing},2} = fill(missing, n, p * (n_alleles - 1))
     locus_counter::Int = 1
     if verbose
-        pb = ProgressMeter.Progress(n_chroms * n * (n_alleles-1), desc = "Simulating allele frequencies: ")
+        pb = ProgressMeter.Progress(
+            n_chroms * n * (n_alleles - 1),
+            desc = "Simulating allele frequencies: ",
+        )
     end
     for i = 1:n_chroms
         n_loci::Int = chrom_loci_counts[i]
@@ -222,7 +225,7 @@ function simulategenomes(;
     genomes.entries = ["entry_" * lpad(i, length(string(n)), "0") for i = 1:n]
     genomes.loci = loci
     genomes.allele_frequencies = allele_frequencies
-    genomes.mask = fill(true, (n, p*(n_alleles-1)))
+    genomes.mask = fill(true, (n, p * (n_alleles - 1)))
     if !check(genomes)
         throw(DimensionMismatch("Error simulating genomes."))
     end
