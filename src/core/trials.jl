@@ -1,19 +1,35 @@
 """
-Trials struct containing phenotype data across years, seasons, harvest, sites, populations, replications, blocks, rows, and columns
+# Trials struct 
+    
+Contains phenotype data across years, seasons, harvest, sites, populations, replications, blocks, rows, and columns
 
-# Fields
-- entries: names of the `n` entries or samples
-- traits: names of the `t` traits
-- phenotypes: `n x t` matrix of numeric (`R`) phenotype data which can have missing values
-- mask: `n x t` matrix of boolean mask for selective analyses and slicing
+## Constructor
 
-# Examples
+```julia
+Trials(; n::Int = 2, p::Int = 2)
+```
+
+## Fields
+- `phenotypes`: `n x t` matrix of numeric phenotype data which can have missing values
+- `traits`: names of the traits `t` traits
+- `years`: names of the years corresponding to each row in the phenotype matrix
+- `seasons`: names of the seasons corresponding to each row in the phenotype matrix
+- `harvests`: names of the harvests corresponding to each row in the phenotype matrix
+- `sites`: names of the sites corresponding to each row in the phenotype matrix
+- `replications`: names of the replications corresponding to each row in the phenotype matrix
+- `blocks`: names of the blocks corresponding to each row in the phenotype matrix
+- `rows`: names of the rows corresponding to each row in the phenotype matrix
+- `cols`: names of the cols corresponding to each row in the phenotype matrix
+- `entries`: names of the entries corresponding to each row in the phenotype matrix
+- `populations`: names of the populations corresponding to each row in the phenotype matrix
+
+## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> trials = Trials(n=1, t=2)
-Trials([#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], Union{Missing, Real}[#undef #undef])
+Trials(Union{Missing, Real}[#undef #undef], [#undef, #undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef])
 
 julia> fieldnames(Trials)
-(:traits, :years, :seasons, :harvests, :sites, :populations, :replications, :rows, :cols, :entries, :phenotypes)
+(:phenotypes, :traits, :years, :seasons, :harvests, :sites, :replications, :blocks, :rows, :cols, :entries, :populations)
 ```
 """
 mutable struct Trials
@@ -48,6 +64,8 @@ mutable struct Trials
 end
 
 """
+    checkdims(trials::Trials)::Bool
+
 Check dimension compatibility of the fields of the Trials struct
 
 # Examples
@@ -56,28 +74,28 @@ julia> trials = Trials(n=1, t=2);
 
 julia> trials.entries = ["entry_1"];
 
-julia> check(trials)
+julia> checkdims(trials)
 true
 
 julia> trials.entries = ["entering_2_entries", "instead_of_just_1"];
 
-julia> check(trials)
+julia> checkdims(trials)
 false
 ```
 """
-function check(trials::Trials)::Bool
+function checkdims(trials::Trials)::Bool
     n, t = size(trials.phenotypes)
     if (t != length(trials.traits)) ||
        (n != length(trials.years)) ||
        (n != length(trials.seasons)) ||
        (n != length(trials.harvests)) ||
        (n != length(trials.sites)) ||
-       (n != length(trials.populations)) ||
        (n != length(trials.replications)) ||
        (n != length(trials.blocks)) ||
        (n != length(trials.rows)) ||
        (n != length(trials.cols)) ||
-       (n != length(trials.entries))
+       (n != length(trials.entries)) ||
+       (n != length(trials.populations))
         return false
     end
     return true

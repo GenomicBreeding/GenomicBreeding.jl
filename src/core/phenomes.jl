@@ -1,14 +1,22 @@
 """
-Phenomes struct containing unique entries and traits where phenotype data can have missing values
+# Phenomes struct
 
-# Fields
-- entries: names of the `n` entries or samples
-- populations: name/s of the population/s each entries or samples belong to
-- traits: names of the `t` traits
-- phenotypes: `n x t` matrix of numeric (`R`) phenotype data which can have missing values
-- mask: `n x t` matrix of boolean mask for selective analyses and slicing
+Constains unique entries and traits where phenotype data can have missing values
 
-# Examples
+## Constructor
+
+```julia
+Phenomes(; n::Int = 1, t::Int = 2)
+```
+
+## Fields
+- `entries`: names of the `n` entries or samples
+- `populations`: name/s of the population/s each entries or samples belong to
+- `traits`: names of the `t` traits
+- `phenotypes`: `n x t` matrix of numeric (`R`) phenotype data which can have missing values
+- `mask`: `n x t` matrix of boolean mask for selective analyses and slicing
+
+## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> phenomes = Phenomes(n=2, t=2)
 Phenomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Real}[#undef #undef; #undef #undef], Bool[0 0; 0 0])
@@ -48,22 +56,24 @@ mutable struct Phenomes
 end
 
 """
+    checkdims(y::Phenomes)::Bool
+
 Check dimension compatibility of the fields of the Phenomes struct
 
 # Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> y = Phenomes(n=2, t=2);
 
-julia> check(y)
+julia> checkdims(y)
 true
 
 julia> y.populations = ["beaking_change"];
 
-julia> check(y)
+julia> checkdims(y)
 false
 ```
 """
-function check(y::Phenomes)::Bool
+function checkdims(y::Phenomes)::Bool
     n, p = size(y.phenotypes)
     if (n != length(y.entries)) ||
        (n != length(y.populations)) ||

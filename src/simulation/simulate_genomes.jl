@@ -9,35 +9,37 @@ using StatsPlots
 Plots.backend(:gr)
 
 """
-Simulate genomes
+# Simulate genomes
 
-# Arguments
-- n: number of entries (default = 100)
-- p: number of loci (default = 10_000)
-- n_chroms: number of chromosomes (default = 7)
-- n_alleles: number of alleles per locus (default = 2)
-- max_pos: total length of the genome in base-pairs (bp) (default = 135_000_000)
-- ld_corr_50perc_kb: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 100_000)
-- seed: psuedo-random number generator seed for replicability (default = 42)
-- verbose: Show progress bar and plot the linkage heatmap into an svg file? (default = true)
+## Arguments
+- `n`: number of entries (default = 100)
+- `l`: number of loci (default = 10_000)
+- `n_chroms`: number of chromosomes (default = 7)
+- `n_alleles`: number of alleles per locus (default = 2)
+- `max_pos`: total length of the genome in base-pairs (bp) (default = 135_000_000)
+- `ld_corr_50perc_kb`: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 100_000)
+- `seed`: psuedo-random number generator seed for replicability (default = 42)
+- `verbose`: Show progress bar and plot the linkage heatmap into an svg file? (default = false)
 
-# Output
-- Genomes
+## Output
+- `Genomes`
 
-# Examples
-```jldoctest; setup = :(using GenomicBreeding, StatsBase)
-julia> genomes = simulategenomes(n=100, p=10_000, n_alleles=3);
+## Examples
+```jldoctest; setup = :(using GenomicBreeding, StatsBase, Random)
+julia> genomes = simulategenomes(n=100, l=10_000, n_alleles=3);
 
 julia> length(genomes.entries)
 100
 
-julia> length(genomes.loci)
+julia> length(genomes.loci_alleles)
 20000
 
 julia> size(genomes.allele_frequencies)
 (100, 20000)
 
-julia> idx = StatsBase.sample(range(1, 20_000, step=2), 250, replace = false, ordered = true);
+julia> rng::TaskLocalRNG = Random.seed!(123);
+
+julia> idx = StatsBase.sample(rng, range(1, 20_000, step=2), 250, replace = false, ordered = true);
 
 julia> correlations = StatsBase.cor(genomes.allele_frequencies[:, idx]);
 
@@ -50,7 +52,7 @@ true
 """
 function simulategenomes(;
     n::Int = 100,
-    p::Int = 10_000,
+    l::Int = 10_000,
     n_chroms::Int = 7,
     n_alleles::Int = 2,
     max_pos::Int = 135_000_000,
@@ -58,28 +60,28 @@ function simulategenomes(;
     seed::Int = 42,
     verbose::Bool = false,
 )::Genomes
-    # n::Int=100;p::Int=10_000;n_chroms::Int=7;n_alleles::Int=3; max_pos::Int=135_000_000; ld_corr_50perc_kb::Int=1e6; seed::Int=42; verbose::Bool=true;
+    # n::Int=100;l::Int=10_000;n_chroms::Int=7;n_alleles::Int=3; max_pos::Int=135_000_000; ld_corr_50perc_kb::Int=1e6; seed::Int=42; verbose::Bool=true;
     # Parameter checks
     if (n < 1) || (n > 1e9)
-        throw(ArgumentError("We accept `n` between 1 and 1 billion."))
+        throw(ArgumentError("We accept `n` from 1 to 1 billion."))
     end
-    if (p < 2) || (p > 1e9)
-        throw(ArgumentError("We accept `p` between 2 and 1 billion."))
+    if (l < 2) || (l > 1e9)
+        throw(ArgumentError("We accept `l` from 2 to 1 billion."))
     end
     if (n_chroms < 1) || (n_chroms > 1e6)
-        throw(ArgumentError("We accept `n_chroms` between 1 and 1 million."))
+        throw(ArgumentError("We accept `n_chroms` from 1 to 1 million."))
     end
     if (n_alleles < 2) || (n_alleles > 5)
         throw(
             ArgumentError(
-                "We accept `n` between 2 and 5, which can be A, T, C, G, and D (for deletion).",
+                "We accept `n` from 2 to 5, which can be A, T, C, G, and D (for deletion).",
             ),
         )
     end
     if (max_pos < 10) || (max_pos > 160e9)
         throw(
             ArgumentError(
-                "We accept `max_pos` between 10 and 160 billion (genome of *Tmesipteris oblanceolata*).",
+                "We accept `max_pos` from 10 to 160 billion (genome of *Tmesipteris oblanceolata*).",
             ),
         )
     end
@@ -90,36 +92,39 @@ function simulategenomes(;
             ),
         )
     end
-    if p > max_pos
-        throw(ArgumentError("The parameter `p` should be less than or equal to `max_pos`."))
+    if l > max_pos
+        throw(ArgumentError("The parameter `l` should be less than or equal to `max_pos`."))
     end
-    if n_chroms > p
+    if n_chroms > l
         throw(
-            ArgumentError("The parameter `n_chroms` should be less than or equal to `p`."),
+            ArgumentError("The parameter `n_chroms` should be less than or equal to `l`."),
         )
     end
     # Instantiate the output struct
-    genomes = Genomes(n = n, p = (p * (n_alleles - 1)))
+    p = l * (n_alleles - 1)
+    genomes = Genomes(n = n, p = p)
     # Instantiate the randomisation
-    Random.seed!(seed)
+    rng::TaskLocalRNG = Random.seed!(seed)
     # Simulate chromosome lengths and number of loci per chromosome
     l1::Int = Int(floor(max_pos / n_chroms))
-    l2::Int = Int(floor(p / n_chroms))
+    l2::Int = Int(floor(l / n_chroms))
     chrom_lengths::Array{Int,1} = [
         i < n_chroms ? l1 : l1 * n_chroms < max_pos ? l1 + (max_pos - l1 * n_chroms) : l1 for i = 1:n_chroms
     ]
     chrom_loci_counts::Array{Int,1} = [
-        i < n_chroms ? l2 : l2 * n_chroms < p ? l2 + (p - l2 * n_chroms) : l2 for
+        i < n_chroms ? l2 : l2 * n_chroms < l ? l2 + (l - l2 * n_chroms) : l2 for
         i = 1:n_chroms
     ]
-    # Simulate loci coordinates
+    # Simulate loci-alleles combinations coordinates
     allele_choices::Array{String,1} = ["A", "T", "C", "G", "D"]
     allele_weights::Weights{Float64,Float64,Vector{Float64}} =
         StatsBase.Weights([1.0, 1.0, 1.0, 1.0, 0.1] / sum([1.0, 1.0, 1.0, 1.0, 0.1]))
     positions::Array{Array{Int},1} = fill(Int[], n_chroms)
-    loci::Array{String,1} = []
+    locus_counter::Int = 1
+    loci_alleles::Array{String,1} = Array{String,1}(undef, p)
     for i = 1:n_chroms
         positions[i] = StatsBase.sample(
+            rng,
             1:chrom_lengths[i],
             chrom_loci_counts[i],
             replace = false,
@@ -127,6 +132,7 @@ function simulategenomes(;
         )
         for pos in positions[i]
             all_alleles::Array{String,1} = StatsBase.sample(
+                rng,
                 allele_choices,
                 allele_weights,
                 n_alleles,
@@ -134,25 +140,24 @@ function simulategenomes(;
                 ordered = false,
             )
             alleles::Array{String,1} = StatsBase.sample(
+                rng,
                 all_alleles,
                 n_alleles - 1,
                 replace = false,
                 ordered = false,
             )
             for j in eachindex(alleles)
-                push!(
-                    loci,
-                    join(
-                        [string("chrom_", i), pos, join(all_alleles, "|"), alleles[j]],
-                        "\t",
-                    ),
+                loci_alleles[locus_counter] = join(
+                    [string("chrom_", i), pos, join(all_alleles, "|"), alleles[j]],
+                    "\t",
                 )
+                locus_counter += 1
             end
         end
     end
     # Simulate allele frequencies with linkage disequillibrium by sampling from a multivariate normal distribution with non-spherical variance-covariance matrix
-    allele_frequencies::Array{Union{Real,Missing},2} = fill(missing, n, p * (n_alleles - 1))
-    locus_counter::Int = 1
+    allele_frequencies::Array{Union{Real,Missing},2} = fill(missing, n, p)
+    locus_counter = 1
     if verbose
         pb = ProgressMeter.Progress(
             n_chroms * n * (n_alleles - 1),
@@ -171,13 +176,13 @@ function simulategenomes(;
             end
         end
         uniform_distibution = Distributions.Uniform(0.0, 1.0)
-        μ::Array{Real,1} = rand(uniform_distibution, n_loci)
+        μ::Array{Real,1} = rand(rng, uniform_distibution, n_loci)
         mvnormal_distribution = Distributions.MvNormal(μ, Σ)
         for a = 1:(n_alleles-1)
             for j = 1:n
                 idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + a
                 idx_fin = ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) + a
-                allele_freqs::Array{Real,1} = rand(mvnormal_distribution)
+                allele_freqs::Array{Real,1} = rand(rng, mvnormal_distribution)
                 if a > 1
                     sum_of_prev_allele_freqs::Array{Real,1} = fill(0.0, n_loci)
                     for ap = 1:(a-1)
@@ -206,7 +211,8 @@ function simulategenomes(;
     if verbose
         ProgressMeter.finish!(pb)
         idx = StatsBase.sample(
-            range(1, p * (n_alleles - 1), step = (n_alleles - 1)),
+            rng,
+            range(1, p, step = (n_alleles - 1)),
             250,
             replace = false,
             ordered = true,
@@ -223,10 +229,10 @@ function simulategenomes(;
     end
     # Output
     genomes.entries = ["entry_" * lpad(i, length(string(n)), "0") for i = 1:n]
-    genomes.loci = loci
+    genomes.loci_alleles = loci_alleles
     genomes.allele_frequencies = allele_frequencies
-    genomes.mask = fill(true, (n, p * (n_alleles - 1)))
-    if !check(genomes)
+    genomes.mask = fill(true, (n, p))
+    if !checkdims(genomes)
         throw(DimensionMismatch("Error simulating genomes."))
     end
     return (genomes)
