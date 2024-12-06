@@ -1,13 +1,3 @@
-using Random
-using StatsBase
-using Distributions
-using ProgressMeter
-using Dates
-using Plots
-using StatsPlots
-# Plots.backend(:plotly)
-Plots.backend(:gr)
-
 """
 # Simulate genomes
 
