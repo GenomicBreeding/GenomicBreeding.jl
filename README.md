@@ -7,6 +7,41 @@
 
 ## Dev stuff:
 
+### Initialise package
+
+```julia
+using PkgTemplates
+t = Template(;
+    user="jeffersonfparil",
+    authors=["jeffersonparil@gmail.com"],
+    dir="./SimQuantGen.jl",
+    julia=v"1.11",
+    plugins=[
+        License(; name="GPL-3.0+", path=nothing, destination="LICENSE.md"),
+        CompatHelper(),
+        Codecov(),    
+        GitHubActions(;
+        osx=false,
+        windows=false,
+        ),
+        Documenter{GitHubActions}(),
+        Git(;
+            ignore=["*.jl.*.cov",
+                    "*.jl.cov",
+                    "*.jl.mem",
+                    "*.code-workspace",
+                    ".DS_Store",
+                    "docs/build/",
+                    "Manifest.toml",
+                    "tmp/",
+                    "*.svg"],
+            ssh=true
+        ),
+    ],
+)
+t("SimQuantGen.jl")
+```
+
 ### REPL prelude
 
 ```julia

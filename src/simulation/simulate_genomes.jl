@@ -9,16 +9,19 @@
 - `max_pos`: total length of the genome in base-pairs (bp) (default = 135_000_000)
 - `ld_corr_50perc_kb`: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 100_000)
 - `seed`: psuedo-random number generator seed for replicability (default = 42)
-- `verbose`: Show progress bar and plot the linkage heatmap into an svg file? (default = false)
+- `verbose`: Show progress bar and plot the linkage heatmap into an svg file? (default = true)
 
 ## Output
 - `Genomes`
 
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding, StatsBase, Random)
-julia> genomes = simulategenomes(n=100, l=10_000, n_alleles=3);
+julia> genomes = simulategenomes(n=100, l=10_000, n_alleles=3, verbose=false);
 
 julia> length(genomes.entries)
+100
+
+julia> length(genomes.populations)
 100
 
 julia> length(genomes.loci_alleles)
@@ -42,18 +45,22 @@ true
 """
 function simulategenomes(;
     n::Int = 100,
+    n_populations::Int = 1,
     l::Int = 10_000,
     n_chroms::Int = 7,
     n_alleles::Int = 2,
     max_pos::Int = 135_000_000,
     ld_corr_50perc_kb::Int = 100_000,
     seed::Int = 42,
-    verbose::Bool = false,
+    verbose::Bool = true,
 )::Genomes
-    # n::Int=100;l::Int=10_000;n_chroms::Int=7;n_alleles::Int=3; max_pos::Int=135_000_000; ld_corr_50perc_kb::Int=1e6; seed::Int=42; verbose::Bool=true;
+    # n::Int=100; n_populations::Int = 2; l::Int=10_000; n_chroms::Int=7;n_alleles::Int=3; max_pos::Int=135_000_000; ld_corr_50perc_kb::Int=1e6; seed::Int=42; verbose::Bool=true;
     # Parameter checks
     if (n < 1) || (n > 1e9)
         throw(ArgumentError("We accept `n` from 1 to 1 billion."))
+    end
+    if (n_populations < 1) || (n_populations > n)
+        throw(ArgumentError("We accept `n_populations` from 1 to `n`."))
     end
     if (l < 2) || (l > 1e9)
         throw(ArgumentError("We accept `l` from 2 to 1 billion."))
@@ -145,6 +152,28 @@ function simulategenomes(;
             end
         end
     end
+    # Group entries into populations
+    population_sizes::Array{Int} = [Int(floor(n / n_populations)) for i = 1:n_populations]
+    sum(population_sizes) < n ? population_sizes[end] += n - sum(population_sizes) : nothing
+    populations::Array{String} = []
+    idx_population_groupings::Array{Array{Int}} = []
+    for i = 1:n_populations
+        append!(
+            populations,
+            [
+                string("pop_", lpad(i, length(string(n_populations)), "0")) for
+                _ = 1:population_sizes[i]
+            ],
+        )
+        if i == 1
+            push!(idx_population_groupings, collect(1:population_sizes[i]))
+        else
+            push!(
+                idx_population_groupings,
+                collect((cumsum(population_sizes)[i-1]+1):cumsum(population_sizes)[i]),
+            )
+        end
+    end
     # Simulate allele frequencies with linkage disequillibrium by sampling from a multivariate normal distribution with non-spherical variance-covariance matrix
     allele_frequencies::Array{Union{Real,Missing},2} = fill(missing, n, p)
     locus_counter = 1
@@ -165,37 +194,40 @@ function simulategenomes(;
                 Σ[idx1, idx2] = 1 / exp(k * dist)
             end
         end
-        uniform_distibution = Distributions.Uniform(0.0, 1.0)
-        μ::Array{Real,1} = rand(rng, uniform_distibution, n_loci)
-        mvnormal_distribution = Distributions.MvNormal(μ, Σ)
-        for a = 1:(n_alleles-1)
-            for j = 1:n
-                idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + a
-                idx_fin = ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) + a
-                allele_freqs::Array{Real,1} = rand(rng, mvnormal_distribution)
-                if a > 1
-                    sum_of_prev_allele_freqs::Array{Real,1} = fill(0.0, n_loci)
-                    for ap = 1:(a-1)
-                        ap_idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + ap
-                        ap_idx_fin =
-                            ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) + ap
-                        x = allele_frequencies[
-                            j,
-                            range(ap_idx_ini, ap_idx_fin, step = (n_alleles - 1)),
-                        ]
-                        sum_of_prev_allele_freqs = sum_of_prev_allele_freqs + x
+        for k = 1:n_populations
+            uniform_distibution = Distributions.Uniform(0.0, 1.0)
+            μ::Array{Real,1} = rand(rng, uniform_distibution, n_loci)
+            mvnormal_distribution = Distributions.MvNormal(μ, Σ)
+            for a = 1:(n_alleles-1)
+                for j in idx_population_groupings[k]
+                    idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + a
+                    idx_fin = ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) + a
+                    allele_freqs::Array{Real,1} = rand(rng, mvnormal_distribution)
+                    if a > 1
+                        sum_of_prev_allele_freqs::Array{Real,1} = fill(0.0, n_loci)
+                        for ap = 1:(a-1)
+                            ap_idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + ap
+                            ap_idx_fin =
+                                ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) +
+                                ap
+                            x = allele_frequencies[
+                                j,
+                                range(ap_idx_ini, ap_idx_fin, step = (n_alleles - 1)),
+                            ]
+                            sum_of_prev_allele_freqs = sum_of_prev_allele_freqs + x
+                        end
+                        allele_freqs = 1 .- sum_of_prev_allele_freqs
                     end
-                    allele_freqs = 1 .- sum_of_prev_allele_freqs
-                end
-                allele_freqs[allele_freqs.>1.0] .= 1.0
-                allele_freqs[allele_freqs.<0.0] .= 0.0
-                allele_frequencies[j, range(idx_ini, idx_fin, step = (n_alleles - 1))] =
-                    allele_freqs
-                if verbose
-                    ProgressMeter.next!(pb)
-                end
-            end
-        end
+                    allele_freqs[allele_freqs.>1.0] .= 1.0
+                    allele_freqs[allele_freqs.<0.0] .= 0.0
+                    allele_frequencies[j, range(idx_ini, idx_fin, step = (n_alleles - 1))] =
+                        allele_freqs
+                    if verbose
+                        ProgressMeter.next!(pb)
+                    end
+                end # entries per population
+            end # alleles
+        end # populations
         locus_counter += n_loci
     end
     if verbose
@@ -208,17 +240,17 @@ function simulategenomes(;
             ordered = true,
         )
         C = StatsBase.cor(allele_frequencies[:, idx])
-        # plt = StatsPlots.density(skipmissing(reshape(allele_frequencies[:, idx], (n*250, 1))))
-        plt = Plots.heatmap(C)
-        fname_svg =
-            "simulated_loci_correlations_heatmap-" *
-            Dates.format(now(), "yyyymmddHHMMSS") *
-            ".svg"
-        Plots.svg(plt, fname_svg)
-        println("Please find the correlations heatmap of the simulated loci: " * fname_svg)
+        plt = UnicodePlots.heatmap(
+            C,
+            height = 100,
+            width = 100,
+            zlabel = "Pairwise loci correlation",
+        )
+        display(plt)
     end
     # Output
     genomes.entries = ["entry_" * lpad(i, length(string(n)), "0") for i = 1:n]
+    genomes.populations = populations
     genomes.loci_alleles = loci_alleles
     genomes.allele_frequencies = allele_frequencies
     genomes.mask = fill(true, (n, p))

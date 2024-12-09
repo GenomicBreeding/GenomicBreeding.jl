@@ -58,7 +58,7 @@ Simulate additive, dominance, and epistatic effects
 
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
-julia> genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3);
+julia> genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false);
 
 julia> G, B = simulategenomiceffects(genomes=genomes, f_additive=0.05, f_dominance=0.75, f_epistasis=0.25);
 
@@ -86,7 +86,7 @@ function simulategenomiceffects(;
     f_epistasis::Real = 0.05,
     seed::Int = 42,
 )::Tuple{Array{Real,2},Array{Real,2}}
-    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3); f_additive::Real = 0.01; f_dominance::Real = 0.10; f_epistasis::Real = 0.05; seed::Int = 42;
+    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_additive::Real = 0.01; f_dominance::Real = 0.10; f_epistasis::Real = 0.05; seed::Int = 42;
     # Argument checks
     if !checkdims(genomes)
         throw(ArgumentError("simulategenomiceffects: error in the genomes input"))
@@ -101,7 +101,7 @@ function simulategenomiceffects(;
         throw(ArgumentError("We accept `f_epistasis` from 0.00 to 1.00."))
     end
     # Genomes dimensions
-    n::Int, p::Int, l::Int, max_n_alleles::Int = dimensions(genomes)
+    n::Int, _n_populations::Int, p::Int, l::Int, max_n_alleles::Int = dimensions(genomes)
     # Number of loci with additive, dominance, and epistasis allele effects (minimum values of 1, 0, and 0 or 2 (if there is non-zero loci with epistasis then we expect to have at least 2 loci interacting), respectively; Note that these are also imposed in the above arguments checks)
     a::Int = Int(maximum([1, round(l * f_additive)]))
     d::Int = Int(maximum([0, round(l * f_additive * f_dominance)]))
@@ -191,52 +191,64 @@ function simulategenomiceffects(;
     )
 end
 
-proportion_of_variance::Array{Real,2} = hcat(
-    vcat([0, 0, 0], repeat([1], outer = 9)),
-    vcat([9, 0, 0], repeat([1], outer = 9)),
-    vcat([1, 1, 1], repeat([0], outer = 9)),
-)
-# df = DataFrame(hcat(trials.years, trials.seasons, trials.harvests, trials.sites, trials.replications, trials.blocks, trials.rows, trials.cols, trials.entries, trials.populations, trials.phenotypes), :auto)
-# column_names::Array{String,1} = [
-#     "years",
-#     "seasons",
-#     "harvests",
-#     "sites",
-#     "replications",
-#     "blocks",
-#     "rows",
-#     "cols",
-#     "entries",
-#     "population",
-# ]
-# append!(column_names, trials.traits)
-# rename!(df, column_names)
-# df_tmp = groupby(df, column_names[9])
-# combine(df_tmp, trials.traits[1] => mean)
-# combine(df_tmp, trials.traits[1] => std)
-# combine(df_tmp, trials.traits[1] => minimum)
-# combine(df_tmp, trials.traits[1] => maximum)
-
 """
 # Simulate trials
 
 ## Arguments
-TODO
+- `genomes`: Genome struct includes the `n` entries x `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles)
+- `n_traits`: Number of traits (default = 3)
+- `n_years`: Number of years (default = 2)
+- `n_seasons`: Number of seasons (default = 4)
+- `n_harvests`: Number of harvests (default = 2)
+- `n_sites`: Number of sites (default = 4)
+- `n_replications`: Number of replications (default = 2)
+- `n_blocks`: Number of blocks across the entire field layout (default = missing)
+- `n_rows`: Number of rows across the entire field layout (default = missing)
+- `n_cols`: Number of columns across the entire field layout (default = missing)
+- `proportion_of_variance`: `12` x `n_traits` numeric matrix of scaled/non-scaled proportion of variances allocated to 
+   genetic and environmental effects (default = missing; values will be sampled from a uniform distribution
+   followed by a biased sample on the first row, i.e. additive effects row).
+   The rows correspond to the variance allocated to:
+    01. additive genetic effects
+    02. dominance genetic effects
+    03. epistasis genetic effects
+    04. years effects
+    05. seasons effects
+    06. harvests effects
+    07. sites effects
+    08. replications effects
+    09. blocks effects
+    10. rows effects
+    11. cols effects
+    12. complex interaction effects
+  
+- `seed`: Randomisation seed (default = 42)
+- `sparsity`: Proportion of missing data (default = 0.0)
+- `verbose`: Show trials simulation progress bar? (default = true)
 
 ## Output
-TODO
+- `Trials`
 
 ## Examples
-```jldoctest; setup = :(using GenomicBreeding)
-julia> genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3);
+```jldoctest; setup = :(using GenomicBreeding; using StatsBase)
+julia> genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false);
 
-julia> trials::Trials = simulatetrials(genomes=genomes);
+julia> trials::Trials = simulatetrials(genomes=genomes, sparsity=0.25, verbose=false);
 
 julia> size(trials.phenotypes)
 (12800, 3)
 
 julia> size(trials.traits)
 (3,)
+
+julia> unique(trials.entries) == genomes.entries
+true
+
+julia> unique(trials.populations) == unique(genomes.populations)
+true
+
+julia> abs(mean(ismissing.(trials.phenotypes)) - 0.25) < 0.00001
+true
 ```
 """
 function simulatetrials(;
@@ -250,12 +262,12 @@ function simulatetrials(;
     n_blocks::Union{Missing,Int} = missing,
     n_rows::Union{Missing,Int} = missing,
     n_cols::Union{Missing,Int} = missing,
-    proportion_of_variance::Array{Real,2} = proportion_of_variance,
-    n_populations::Int = 1,
+    proportion_of_variance::Union{Missing,Array{Real,2}} = missing,
+    sparsity::Real = 0.0,
     seed::Int = 42,
-    verbose::Bool = false,
+    verbose::Bool = true,
 )::Trials
-    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3); n_traits::Int = 3; n_years::Int = 2; n_seasons::Int = 4; n_harvests::Int = 2; n_sites::Int = 4; n_replications::Int = 2; n_blocks::Union{Missing,Int} = missing; n_rows::Union{Missing,Int} = missing; n_cols::Union{Missing,Int} = missing; proportion_of_variance::Array{Real,2}=hcat(vcat([0,0,0], repeat([1], outer=9)), vcat([9,0,0], repeat([1], outer=9)), vcat([1,1,1], repeat([0], outer=9))); n_populations::Int = 1; seed::Int = 42; verbose::Bool = false;
+    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); n_traits::Int = 3; n_years::Int = 2; n_seasons::Int = 4; n_harvests::Int = 2; n_sites::Int = 4; n_replications::Int = 2; n_blocks::Union{Missing,Int} = missing; n_rows::Union{Missing,Int} = missing; n_cols::Union{Missing,Int} = missing; proportion_of_variance::Union{Missing,Array{Real,2}} = missing; sparsity::Real = 0.25; seed::Int = 42; verbose::Bool = false;
     # Argument checks
     if !checkdims(genomes)
         throw(ArgumentError("simulategenomiceffects: error in the genomes input"))
@@ -279,7 +291,7 @@ function simulatetrials(;
         throw(ArgumentError("We accept `n_replications` from 1 to 1 million."))
     end
     # Genomes dimensions
-    n::Int, p::Int, l::Int, max_n_alleles::Int = dimensions(genomes)
+    n::Int, n_populations::Int, p::Int, l::Int, max_n_alleles::Int = dimensions(genomes)
     # Argument checks (continued...)
     if !ismissing(n_blocks)
         if (n * n_replications % n_blocks) > 0
@@ -371,7 +383,13 @@ function simulatetrials(;
             counter_cols_per_block += 1
         end
     end
+    # Set randomisation seed
+    rng::TaskLocalRNG = Random.seed!(seed)
     # Argument checks (continued...)
+    if ismissing(proportion_of_variance)
+        proportion_of_variance::Union{Missing,Array{Real,2}} = rand(rng, 12, n_traits)
+        proportion_of_variance[1, :] .= sample(rng, 1:10, n_traits)
+    end
     if size(proportion_of_variance) != (12, n_traits)
         throw(
             ArgumentError(
@@ -399,8 +417,8 @@ function simulatetrials(;
             ),
         )
     end
-    if (n_populations < 1) || (n_populations > n)
-        throw(ArgumentError("We accept `n_populations` from 1 to `n`."))
+    if (sparsity < 0.0) || (sparsity > 1.0)
+        throw(ArgumentError("We accept `sparsity` from 0.0 to 1.0."))
     end
     # Instantiate output Trials struct
     n_total::Int = n_years * n_seasons * n_harvests * n_sites * n_replications * n
@@ -422,6 +440,7 @@ function simulatetrials(;
     # Simulate the genetic effects 
     # G: genetic effects per entry x additive, dominance, & epistasis
     # B: allele effects per locus-allele combination x additive, dominance, & epistasis
+    # TODO: Make use of `B` to simulate locus-by-environment interaction effects
     G::Array{Real,2}, B::Array{Real,2} = simulategenomiceffects(
         genomes = genomes,
         f_additive = 0.05,
@@ -429,16 +448,6 @@ function simulatetrials(;
         f_epistasis = 0.25,
         seed = seed,
     )
-    # Set randomisation seed
-    rng::TaskLocalRNG = Random.seed!(seed)
-    # Simulate population groupings of the entries in the genomes input
-    populations::Array{String,1} = fill("", n)
-    for i = 1:n
-        populations[i] = string(
-            "Population_",
-            lpad(i, length(string(StatsBase.sample(rng, 1:n_populations, 1))), "0"),
-        )
-    end
     # Simulate effects
     if verbose
         pb = ProgressMeter.Progress(
@@ -605,7 +614,8 @@ function simulatetrials(;
                                     "0",
                                 )
                             trials.entries[idx_out_ini:idx_out_fin] = genomes.entries
-                            trials.populations[idx_out_ini:idx_out_fin] = populations
+                            trials.populations[idx_out_ini:idx_out_fin] =
+                                genomes.populations
                             idx_out_ini += n
                             idx_out_fin = (idx_out_ini - 1) + n
                             if verbose
@@ -620,9 +630,37 @@ function simulatetrials(;
     if verbose
         ProgressMeter.finish!(pb)
     end
+    # Simulate sparsity
+    if sparsity > 0.0
+        m::Int, t::Int = size(trials.phenotypes)
+        idx = sample(rng, 1:(m*t), Int(round(sparsity * m * t)), replace = false)
+        idx_rows = (idx .% m) .+ 1
+        idx_cols = (idx .% t) .+ 1
+        trials.phenotypes[CartesianIndex.(idx_rows, idx_cols)] .= missing
+
+    end
     # Output check
     if !checkdims(trials)
         throw(DimensionMismatch("Error simulating genomes."))
     end
+    if verbose
+        # Show distribution of the traits across the entire simulation
+        for j = 1:length(trials.traits)
+            # j = 1
+            trait = trials.traits[j]
+            y = filter(yi -> !ismissing(yi), skipmissing(trials.phenotypes[:, j]))
+            println(trait)
+            println(
+                string(
+                    "Sparsity: ",
+                    round(100.0 * mean(ismissing.(trials.phenotypes[:, j]))),
+                    "%",
+                ),
+            )
+            plt = UnicodePlots.histogram(y)
+            display(plt)
+        end
+    end
+    # Output
     trials
 end

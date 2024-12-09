@@ -9,3 +9,4 @@ Manifest.toml
 docs/build/
 tmp/
 *.svg
+*.jld2
