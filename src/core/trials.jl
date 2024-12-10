@@ -6,7 +6,7 @@ Contains phenotype data across years, seasons, harvest, sites, populations, repl
 ## Constructor
 
 ```julia
-Trials(; n::Int = 2, p::Int = 2)
+Trials(; n::Int64 = 2, p::Int64 = 2)
 ```
 
 ## Fields
@@ -26,14 +26,14 @@ Trials(; n::Int = 2, p::Int = 2)
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> trials = Trials(n=1, t=2)
-Trials(Union{Missing, Real}[#undef #undef], [#undef, #undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef])
+Trials(Union{Missing, Float64}[missing missing], [#undef, #undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef])
 
 julia> fieldnames(Trials)
 (:phenotypes, :traits, :years, :seasons, :harvests, :sites, :replications, :blocks, :rows, :cols, :entries, :populations)
 ```
 """
 mutable struct Trials
-    phenotypes::Array{Union{Real,Missing},2}
+    phenotypes::Array{Union{Float64,Missing},2}
     traits::Array{String,1}
     years::Array{String,1}
     seasons::Array{String,1}
@@ -45,9 +45,9 @@ mutable struct Trials
     cols::Array{String,1}
     entries::Array{String,1}
     populations::Array{String,1}
-    function Trials(; n::Int = 2, t::Int = 2)
+    function Trials(; n::Int64 = 2, t::Int64 = 2)
         new(
-            Array{Real,2}(undef, n, t),
+            fill(missing, n, t),
             Array{String,1}(undef, t),
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
@@ -99,4 +99,35 @@ function checkdims(trials::Trials)::Bool
         return false
     end
     return true
+end
+
+function tabularise(trials::Trials)::DataFrame
+    # trials::Trials, _ = simulatetrials(genomes = simulategenomes());
+    df_ids::DataFrame = DataFrame(
+        id = 1:length(trials.years),
+        years = trials.years,
+        seasons = trials.seasons,
+        harvests = trials.harvests,
+        sites = trials.sites,
+        replications = trials.replications,
+        blocks = trials.blocks,
+        rows = trials.rows,
+        cols = trials.cols,
+        entries = trials.entries,
+    )
+    df_phe::DataFrame = DataFrame(trials.phenotypes, :auto)
+    rename!(df_phe, trials.traits)
+    df_phe.id = 1:length(trials.years)
+    df = innerjoin(df_ids, df_phe, on = :id)
+    df
+end
+
+function plot(trials::Trials)::Bool
+    seed = 42069
+    trials, _ = simulatetrials(genomes = simulategenomes(seed = seed), seed = seed)
+    df::DataFrame = tabularise(trials)
+    plt = corrplot(trials.phenotypes)
+
+
+    false
 end

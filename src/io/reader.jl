@@ -5,7 +5,11 @@ function read(fname::Union{Missing,String} = missing)::Genomes
     end
     genomes::Genomes = load(fname)["genomes"]
     if !checkdims(genomes)
-        throw(DimensionMismatch("Genomes struct from the JLD2 file: " * fname * " is corrupted."))
+        throw(
+            DimensionMismatch(
+                "Genomes struct from the JLD2 file: " * fname * " is corrupted.",
+            ),
+        )
     end
     genomes
 end

@@ -1,7 +1,7 @@
 using StatsBase
 
-n::Int = 10
-p::Int = 5
+n::Int64 = 10
+p::Int64 = 5
 X = rand(n, p)
 b = rand(p)
 e = rand(n)

@@ -6,7 +6,7 @@ Containes unique entries and loci_alleles where allele frequencies can have miss
 ## Constructor
 
 ```julia
-Genomes(; n::Int = 1, p::Int = 2)
+Genomes(; n::Int64 = 1, p::Int64 = 2)
 ```
 
 ## Fields
@@ -19,7 +19,7 @@ Genomes(; n::Int = 1, p::Int = 2)
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> genomes = Genomes(n=2, p=2)
-Genomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Real}[#undef #undef; #undef #undef], Bool[0 0; 0 0])
+Genomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
 
 julia> fieldnames(Genomes)
 (:entries, :populations, :loci_alleles, :allele_frequencies, :mask)
@@ -35,21 +35,21 @@ julia> genomes.allele_frequencies = [0.5 0.25; 0.9 missing];
 julia> genomes.mask = [true true; true false];
 
 julia> genomes
-Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1_12345_A|T_A", "chr2_678910_C|D_D"], Union{Missing, Real}[0.5 0.25; 0.9 missing], Bool[1 1; 1 0])
+Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1_12345_A|T_A", "chr2_678910_C|D_D"], Union{Missing, Float64}[0.5 0.25; 0.9 missing], Bool[1 1; 1 0])
 ```
 """
 mutable struct Genomes
     entries::Array{String,1}
     populations::Array{String,1}
     loci_alleles::Array{String,1}
-    allele_frequencies::Array{Union{Real,Missing},2}
+    allele_frequencies::Array{Union{Float64,Missing},2}
     mask::Array{Bool,2}
-    function Genomes(; n::Int = 1, p::Int = 2)
+    function Genomes(; n::Int64 = 1, p::Int64 = 2)
         new(
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
             Array{String,1}(undef, p),
-            Array{Real,2}(undef, n, p),
+            fill(missing, n, p),
             fill(false, n, p),
         )
     end
@@ -84,7 +84,7 @@ function checkdims(genomes::Genomes)::Bool
     if !isa(genomes.entries, Array{String,1}) ||
        !isa(genomes.populations, Array{String,1}) ||
        !isa(genomes.loci_alleles, Array{String,1}) ||
-       !isa(genomes.allele_frequencies, Array{Union{Real,Missing},2}) ||
+       !isa(genomes.allele_frequencies, Array{Union{Float64,Missing},2}) ||
        !isa(genomes.mask, Array{Bool,2})
         return false
     end
@@ -92,7 +92,7 @@ function checkdims(genomes::Genomes)::Bool
 end
 
 """
-    dimensions(genomes::Genomes)::Tuple{Int, Int, Int}
+    dimensions(genomes::Genomes)::Tuple{Int64, Int64, Int64}
 
 Count the number of entries, populations, loci, and maximum number of alleles per locus in the Genomes struct
 
@@ -104,27 +104,27 @@ julia> dimensions(genomes)
 (100, 100, 3000, 1000, 4)
 ```
 """
-function dimensions(genomes::Genomes)::Tuple{Int,Int,Int,Int,Int}
-    n_entries::Int = length(genomes.entries)
-    n_populations::Int = length(genomes.populations)
-    n_loci_alleles::Int = length(genomes.loci_alleles)
-    n_loci::Int = 0
-    max_n_alleles::Int = 0
+function dimensions(genomes::Genomes)::Tuple{Int64,Int64,Int64,Int64,Int64}
+    n_entries::Int64 = length(genomes.entries)
+    n_populations::Int64 = length(genomes.populations)
+    n_loci_alleles::Int64 = length(genomes.loci_alleles)
+    n_loci::Int64 = 0
+    max_n_alleles::Int64 = 0
     chr::String = ""
-    pos::Int = 0
+    pos::Int64 = 0
     for locus in genomes.loci_alleles
         # locus = genomes.loci_alleles[1]
         locus_ids::Array{String,1} = split(locus, '\t')
         if n_loci == 0
             chr = locus_ids[1]
-            pos = parse(Int, locus_ids[2])
+            pos = parse(Int64, locus_ids[2])
             max_n_alleles = length(split(locus_ids[3], '|'))
             n_loci += 1
         else
-            if ((chr == locus_ids[1]) && (pos != parse(Int, locus_ids[2]))) ||
+            if ((chr == locus_ids[1]) && (pos != parse(Int64, locus_ids[2]))) ||
                (chr != locus_ids[1])
                 chr = locus_ids[1]
-                pos = parse(Int, locus_ids[2])
+                pos = parse(Int64, locus_ids[2])
                 n_alleles = length(split(locus_ids[3], '|'))
                 max_n_alleles = max_n_alleles < n_alleles ? n_alleles : max_n_alleles
                 n_loci += 1

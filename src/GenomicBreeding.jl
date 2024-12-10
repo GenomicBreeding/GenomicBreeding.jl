@@ -19,12 +19,15 @@ Plots.backend(:gr)
 include("core/genomes.jl")
 include("core/phenomes.jl")
 include("core/trials.jl")
+include("core/simulated_effects.jl")
 include("simulation/simulate_genomes.jl")
 include("simulation/simulate_trials.jl")
+include("precompile.jl")
 
-export Genomes, Phenomes, Trials
+export Genomes, Phenomes, Trials, SimulatedEffects
 export checkdims, dimensions
 export simulategenomes
 export simulateeffects, simulategenomiceffects, simulatetrials
+export tabularise, plot
 
 end

@@ -6,7 +6,7 @@ Constains unique entries and traits where phenotype data can have missing values
 ## Constructor
 
 ```julia
-Phenomes(; n::Int = 1, t::Int = 2)
+Phenomes(; n::Int64 = 1, t::Int64 = 2)
 ```
 
 ## Fields
@@ -19,7 +19,7 @@ Phenomes(; n::Int = 1, t::Int = 2)
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> phenomes = Phenomes(n=2, t=2)
-Phenomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Real}[#undef #undef; #undef #undef], Bool[0 0; 0 0])
+Phenomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
 
 julia> fieldnames(Phenomes)
 (:entries, :populations, :traits, :phenotypes, :mask)
@@ -35,21 +35,21 @@ julia> phenomes.phenotypes = [200.0 2.5; 150.0 missing];
 julia> phenomes.mask = [true true; true false];
 
 julia> phenomes
-Phenomes(["entry_1", "entry_2"], ["pop_A", "pop_B"], ["height", "yield"], Union{Missing, Real}[200.0 2.5; 150.0 missing], Bool[1 1; 1 0])
+Phenomes(["entry_1", "entry_2"], ["pop_A", "pop_B"], ["height", "yield"], Union{Missing, Float64}[200.0 2.5; 150.0 missing], Bool[1 1; 1 0])
 ```
 """
 mutable struct Phenomes
     entries::Array{String,1}
     populations::Array{String,1}
     traits::Array{String,1}
-    phenotypes::Array{Union{Real,Missing},2}
+    phenotypes::Array{Union{Float64,Missing},2}
     mask::Array{Bool,2}
-    function Phenomes(; n::Int = 1, t::Int = 2)
+    function Phenomes(; n::Int64 = 1, t::Int64 = 2)
         new(
             Array{String,1}(undef, n),
             Array{String,1}(undef, n),
             Array{String,1}(undef, t),
-            Array{Real,2}(undef, n, t),
+            fill(missing, n, t),
             fill(false, n, t),
         )
     end
@@ -84,7 +84,7 @@ function checkdims(y::Phenomes)::Bool
     if !isa(y.entries, Array{String,1}) ||
        !isa(y.populations, Array{String,1}) ||
        !isa(y.traits, Array{String,1}) ||
-       !isa(y.phenotypes, Array{Union{Real,Missing},2}) ||
+       !isa(y.phenotypes, Array{Union{Float64,Missing},2}) ||
        !isa(y.mask, Array{Bool,2})
         return false
     end
