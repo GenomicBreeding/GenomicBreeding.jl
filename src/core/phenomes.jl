@@ -19,7 +19,7 @@ Phenomes(; n::Int64 = 1, t::Int64 = 2)
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> phenomes = Phenomes(n=2, t=2)
-Phenomes([#undef, #undef], [#undef, #undef], [#undef, #undef], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
+Phenomes(["", ""], ["", ""], ["", ""], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
 
 julia> fieldnames(Phenomes)
 (:entries, :populations, :traits, :phenotypes, :mask)
@@ -45,13 +45,7 @@ mutable struct Phenomes
     phenotypes::Array{Union{Float64,Missing},2}
     mask::Array{Bool,2}
     function Phenomes(; n::Int64 = 1, t::Int64 = 2)
-        new(
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, t),
-            fill(missing, n, t),
-            fill(false, n, t),
-        )
+        new(fill("", n), fill("", n), fill("", t), fill(missing, n, t), fill(false, n, t))
     end
 end
 
@@ -65,19 +59,23 @@ Check dimension compatibility of the fields of the Phenomes struct
 julia> y = Phenomes(n=2, t=2);
 
 julia> checkdims(y)
-true
+false
 
-julia> y.populations = ["beaking_change"];
+julia> y.entries = ["entry_1", "entry_2"];
+
+julia> y.traits = ["trait_1", "trait_2"];
 
 julia> checkdims(y)
-false
+true
 ```
 """
 function checkdims(y::Phenomes)::Bool
     n, p = size(y.phenotypes)
     if (n != length(y.entries)) ||
+       (n != length(unique(y.entries))) ||
        (n != length(y.populations)) ||
        (p != length(y.traits)) ||
+       (p != length(unique(y.traits))) ||
        ((n, p) != size(y.mask))
         return false
     end

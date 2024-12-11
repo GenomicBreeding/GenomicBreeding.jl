@@ -123,9 +123,10 @@ function tabularise(trials::Trials)::DataFrame
 end
 
 function plot(trials::Trials)::Bool
-    seed = 42069
+    seed = abs(rand(Int, 1)[1])
     trials, _ = simulatetrials(genomes = simulategenomes(seed = seed), seed = seed)
     df::DataFrame = tabularise(trials)
+    cor(trials.phenotypes)
     plt = corrplot(trials.phenotypes)
 
 

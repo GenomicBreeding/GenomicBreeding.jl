@@ -7,7 +7,9 @@
 - `n_chroms`: number of chromosomes (default = 7)
 - `n_alleles`: number of alleles per locus (default = 2)
 - `max_pos`: total length of the genome in base-pairs (bp) (default = 135_000_000)
-- `ld_corr_50perc_kb`: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 100_000)
+- `ld_corr_50perc_kb`: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 1_000)
+- `μ_β_params`: the shape parameters of the Beta distribution from which the mean allele frequencies will be sampled 
+  (default = (0.5, 0.5); U-shaped distribution)
 - `sparsity`: Proportion of missing data (default = 0.0)
 - `seed`: psuedo-random number generator seed for replicability (default = 42)
 - `verbose`: Show progress bar and plot the linkage heatmap into an svg file? (default = true)
@@ -59,12 +61,13 @@ function simulategenomes(;
     n_chroms::Int64 = 7,
     n_alleles::Int64 = 2,
     max_pos::Int64 = 135_000_000,
-    ld_corr_50perc_kb::Int64 = 100_000,
+    ld_corr_50perc_kb::Int64 = 1_000,
+    μ_β_params::Tuple{Float64,Float64} = (0.5, 0.5),
     sparsity::Float64 = 0.0,
     seed::Int64 = 42,
     verbose::Bool = true,
 )::Genomes
-    # n::Int64=100; n_populations::Int64 = 2; l::Int64=10_000; n_chroms::Int64=7;n_alleles::Int64=3; max_pos::Int64=135_000_000; ld_corr_50perc_kb::Int64=1e6; seed::Int64=42; sparsity::Float64 = 0.25; verbose::Bool=true;
+    # n::Int64=100; n_populations::Int64 = 2; l::Int64=10_000; n_chroms::Int64=7;n_alleles::Int64=3; max_pos::Int64=135_000_000; ld_corr_50perc_kb::Int64=1_000; seed::Int64=42; μ_β_params::Tuple{Float64, Float64} = (0.5, 0.5); sparsity::Float64 = 0.25; verbose::Bool=true;
     # Parameter checks
     if (n < 1) || (n > 1e9)
         throw(ArgumentError("We accept `n` from 1 to 1 billion."))
@@ -198,16 +201,34 @@ function simulategenomes(;
         n_loci::Int64 = chrom_loci_counts[i]
         pos::Array{Int64,1} = positions[i]
         Σ::Array{Float64,2} = fill(0.0, (n_loci, n_loci))
-        k::Float64 = log(2.0) / (ld_corr_50perc_kb / chrom_lengths[i]) # from f(x) = 0.5 = 1 / exp(k*x); where x = normalised distance between loci
+        r::Float64 = log(2.0) / ((ld_corr_50perc_kb * 1_000) / chrom_lengths[i]) # from f(x) = 0.5 = 1 / exp(r*x); where x = normalised distance between loci
         for idx1 = 1:n_loci
             for idx2 = 1:n_loci
                 dist::Float64 = abs(pos[idx1] - pos[idx2]) / chrom_lengths[i]
-                Σ[idx1, idx2] = 1 / exp(k * dist)
+                Σ[idx1, idx2] = 1 / exp(r * dist)
             end
         end
         for k = 1:n_populations
-            uniform_distibution = Distributions.Uniform(0.0, 1.0)
-            μ::Array{Float64,1} = rand(rng, uniform_distibution, n_loci)
+            # Sample mean allele frequencies per population
+            Beta_distibution = Distributions.Beta(μ_β_params[1], μ_β_params[2])
+            μ::Array{Float64,1} = rand(rng, Beta_distibution, n_loci)
+            # Scale the variance-covariance matrix by the allele frequency means
+            # such that the closer to fixation (closer to 0.0 or 1.0) the lower the variance
+            idx_greater_than_half::Array{Int64,1} = findall(μ .> 0.5)
+            σ² = copy(μ)
+            σ²[idx_greater_than_half] = 1.00 .- μ[idx_greater_than_half]
+            Σ .*= σ² * σ²'
+            # Make sure that the variance-covariance matrix is positive definite
+            max_iter::Int64 = 10
+            iter::Int64 = 1
+            while !isposdef(Σ) && (iter < max_iter)
+                if iter == 1
+                    Σ[diagind(Σ)] .+= 1.0e-12
+                end
+                Σ[diagind(Σ)] .*= 10.0
+                iter += 1
+            end
+            # Define the multivariate normal distribution
             mvnormal_distribution = Distributions.MvNormal(μ, Σ)
             for a = 1:(n_alleles-1)
                 for j in idx_population_groupings[k]
@@ -243,21 +264,6 @@ function simulategenomes(;
     end
     if verbose
         ProgressMeter.finish!(pb)
-        idx = StatsBase.sample(
-            rng,
-            range(1, p, step = (n_alleles - 1)),
-            250,
-            replace = false,
-            ordered = true,
-        )
-        C = StatsBase.cor(allele_frequencies[:, idx])
-        plt = UnicodePlots.heatmap(
-            C,
-            height = 100,
-            width = 100,
-            zlabel = "Pairwise loci correlation",
-        )
-        display(plt)
     end
     # Populate the output struct
     genomes.entries = ["entry_" * lpad(i, length(string(n)), "0") for i = 1:n]
@@ -271,6 +277,35 @@ function simulategenomes(;
         idx_rows = (idx .% n) .+ 1
         idx_cols = Int.(floor.(idx ./ n)) .+ 1
         genomes.allele_frequencies[CartesianIndex.(idx_rows, idx_cols)] .= missing
+    end
+    if verbose
+        # Plots of population 1 just as an example
+        idx = StatsBase.sample(
+            rng,
+            range(1, p, step = (n_alleles - 1)),
+            250,
+            replace = false,
+            ordered = true,
+        )
+        Q = allele_frequencies[1:population_sizes[1], idx]
+        q::Array{Float64,1} =
+            filter(!ismissing, reshape(Q, (population_sizes[1] * length(idx), 1)))
+        plt_histogram = UnicodePlots.histogram(
+            q,
+            title = "Population 1 allele frequencies",
+            vertical = true,
+            xlim = (0.0, 1.0),
+            nbins = 50,
+        )
+        display(plt_histogram)
+        C = StatsBase.cor(Q[:, findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)])
+        plt_correlation = UnicodePlots.heatmap(
+            C,
+            height = 100,
+            width = 100,
+            zlabel = "Pairwise loci correlation",
+        )
+        display(plt_correlation)
     end
     ### Check dimensions
     if !checkdims(genomes)

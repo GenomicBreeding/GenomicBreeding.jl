@@ -1,210 +1,13 @@
 """
-# Simulate effects
-
-Sample `p` x `q` effects from a multivariate normal distribution with
-`μ~Exp(λ)` and `Σ=μμ'`
-
-## Arguments
-- `p`: number of correlated effects to simulate (default = 2)
-- `q`: number times to simulate the correlated effects from the same distribution (default = 1)
-- `λ`: parameter of the exponential distritbution from which the means will be sampled from (default = 1.00)
-- `seed`: randomisation seed (default = 42)
-
-## Output
-- `p` x `q` matrix of correlated effects
-
-## Examples
-```jldoctest; setup = :(using GenomicBreeding)
-julia> θ::Array{Float64,2} = simulateeffects();
-
-julia> sum(abs.(θ - [-0.0886501800782904; -0.596478483888422])) < 0.00001
-true
-```
-"""
-function simulateeffects(;
-    p::Int64 = 2,
-    q::Int64 = 1,
-    λ::Float64 = 1.00,
-    seed::Int64 = 42,
-)::Array{Float64,2}
-    rng::TaskLocalRNG = Random.seed!(seed)
-    μ_dist::Exponential = Distributions.Exponential(λ)
-    μ::Array{Float64,1} = rand(rng, μ_dist, p)
-    Σ::Array{Float64,2} = μ * μ'
-    while abs(det(Σ)) < 1e-12
-        Σ[diagind(Σ)] .+= 1.0
-        if abs(det(Σ)) >= 1e-12
-            break
-        else
-            μ = rand(rng, μ_dist, p)
-            Σ = μ * μ'
-        end
-    end
-    dist::MvNormal = Distributions.MvNormal(μ, Σ)
-    X::Array{Float64,2} = rand(rng, dist, q)
-    X
-end
-
-
-"""
-# Simulate genomic effects
-
-Simulate additive, dominance, and epistatic effects
-
-## Arguments
-- `genomes`: Genome struct includes the `n` entries x `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles)
-- `f_additive`: proportion of the `l` loci with non-zero additive effects on the phenotype
-- `f_dominance`: proportion of the `l*f_additive` additive effects loci with additional dominance effects
-- `f_epistasis`: proportion of the `l*f_additive` additive effects loci with additional epistasis effects
-
-## Outputs
-- `n` x `3` matrix of additive, dominance and epistasis effects per entry
-- `p` x `3` matrix of additive, dominance and epistasis effects per locus-allele combination
-
-## Examples
-```jldoctest; setup = :(using GenomicBreeding)
-julia> genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false);
-
-julia> G, B = simulategenomiceffects(genomes=genomes, f_additive=0.05, f_dominance=0.75, f_epistasis=0.25);
-
-julia> size.([G, B])
-2-element Vector{Tuple{Int64, Int64}}:
- (100, 3)
- (4000, 3)
-
-julia> sum(B .!= 0.0, dims=1)
-1×3 Matrix{Int64}:
- 200  75  50
-```
-
-## Details
-The additive, dominance, and epistasis allele effects share a common exponential distribution (`λ=1`) from which 
-the mean of the effects (`μ`) are sampled, and the covariance matrix is derived (`Σ = μ * μ'`; 
-where if `det(Σ)≈0` then we iteratively add 1.00 to the diagonals until it becomes invertible or 10 iterations 
-finishes and throws an error). The non-additive or epistasis allele effects were simulated by multiplying the allele 
-frequencies of all possible unique pairs of epistasis alleles and their effects.
-"""
-function simulategenomiceffects(;
-    genomes::Genomes,
-    f_additive::Float64 = 0.01,
-    f_dominance::Float64 = 0.10,
-    f_epistasis::Float64 = 0.05,
-    seed::Int64 = 42,
-)::Tuple{Array{Float64,2},Array{Float64,2}}
-    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_additive::Float64 = 0.01; f_dominance::Float64 = 0.10; f_epistasis::Float64 = 0.05; seed::Int64 = 42;
-    # Argument checks
-    if !checkdims(genomes)
-        throw(ArgumentError("simulategenomiceffects: error in the genomes input"))
-    end
-    if (f_additive < 0.0) || (f_additive > 1.0)
-        throw(ArgumentError("We accept `f_additive` from 0.00 to 1.00."))
-    end
-    if (f_dominance < 0.0) || (f_dominance > 1.0)
-        throw(ArgumentError("We accept `f_dominance` from 0.00 to 1.00."))
-    end
-    if (f_epistasis < 0.0) || (f_epistasis > 1.0)
-        throw(ArgumentError("We accept `f_epistasis` from 0.00 to 1.00."))
-    end
-    # Genomes dimensions
-    n::Int64, _n_populations::Int64, p::Int64, l::Int64, max_n_alleles::Int64 =
-        dimensions(genomes)
-    # Number of loci with additive, dominance, and epistasis allele effects (minimum values of 1, 0, and 0 or 2 (if there is non-zero loci with epistasis then we expect to have at least 2 loci interacting), respectively; Note that these are also imposed in the above arguments checks)
-    a::Int64 = Int64(maximum([1, round(l * f_additive)]))
-    d::Int64 = Int64(maximum([0, round(l * f_additive * f_dominance)]))
-    e::Int64 = Int64(maximum([0, round(l * f_additive * f_epistasis)]))
-    if e == 1
-        e = 2 # if there is one epistatic locus then it should interact with at least one other locus
-    end
-    # Instantiate the output vectors
-    α::Array{Float64,1} = fill(0.0, p) # additive allele effects of the p loci-allele combinations
-    δ::Array{Float64,1} = fill(0.0, p) # dominance allele effects of the p loci-allele combinations
-    ξ::Array{Float64,1} = fill(0.0, p) # epistasis allele effects of the p loci-allele combinations
-    # Set randomisation seed
-    rng::TaskLocalRNG = Random.seed!(seed)
-    # Define the loci coordinates with non-zero genetic effects
-    idx_additive::Array{Int64,1} =
-        StatsBase.sample(rng, 1:l, a, replace = false, ordered = true)
-    idx_dominance::Array{Int64,1} =
-        StatsBase.sample(rng, idx_additive, d, replace = false, ordered = true)
-    idx_epistasis::Array{Int64,1} =
-        StatsBase.sample(rng, idx_additive, e, replace = false, ordered = true)
-    # Sample additive allele effects from a multivariate normal distribution with non-spherical covariance matrix
-    # Notes:
-    #   - We are simulating effects on max_n_alleles - 1 alleles hence assuming the remaining allele has zero relative effect.
-    #   - We are using a begin-end block to modularise the additive allele effects simulation and will do the same for the dominance and epistasis allele effects.
-    additive_effects_per_entry::Array{Float64,1} = begin
-        # Simulate the additive allele effects
-        A::Array{Float64,2} = simulateeffects(p = a, q = (max_n_alleles - 1), seed = seed)
-        # Define the loci-alleles combination indexes corresponding to the additive allele loci
-        idx_p_additive::Array{Int64,1} = []
-        for i = 1:(max_n_alleles-1)
-            append!(idx_p_additive, (idx_additive * (max_n_alleles - 1)) .- (i - 1))
-        end
-        sort!(idx_p_additive)
-        # Update the additive allele effects
-        α[idx_p_additive] = reshape(A', (a * (max_n_alleles - 1), 1))
-        # Additive effects per entry
-        genomes.allele_frequencies * α
-    end
-    # Sample dominance allele effects from a multivariate normal distribution with non-spherical covariance matrix
-    dominance_effects_per_entry::Array{Float64,1} = begin
-        # Simulate the dominance allele effects
-        D::Array{Float64,2} = simulateeffects(p = d, q = 1, seed = seed)
-        # Define the loci-alleles combination indexes corresponding to the first allele per locus with a dominance effect
-        idx_p_dominance = (idx_dominance * (max_n_alleles - 1)) .- 1
-        sort!(idx_p_dominance)
-        # Update the dominance allele effects
-        δ[idx_p_dominance] = D[:, 1]
-        # Dominance effects per entry
-        genomes.allele_frequencies * δ
-    end
-    # Sample epistasis allele effects from a multivariate normal distribution with non-spherical covariance matrix
-    # Notes:
-    #   - We are simulating effects on max_n_alleles - 1 alleles hence assuming the remaining allele has zero relative effect.
-    #   - Then we simulate the non-additive or epistasis allele effects by multiplying the allele frequencies of 2 epistasis loci and their effects.
-    epistasis_effects_per_entry::Array{Float64,1} = begin
-        # Simulate the epistasis allele effects
-        E::Array{Float64,2} = simulateeffects(p = e, q = (max_n_alleles - 1), seed = seed)
-        # Define the loci-alleles combination indexes corresponding to the epistasis allele loci
-        idx_p_epistasis::Array{Int64,1} = []
-        for i = 1:(max_n_alleles-1)
-            append!(idx_p_epistasis, (idx_epistasis * (max_n_alleles - 1)) .- (i - 1))
-        end
-        sort!(idx_p_epistasis)
-        # Update the epistasis allele effects
-        ξ[idx_p_epistasis] = reshape(E', (e * (max_n_alleles - 1), 1))
-        # Simulate the epistasis allele effects as the sum of the products over all possible pairs of epistatic alleles of their allele frequencies, and epistatic sllele effects
-        epistasis_per_entry::Array{Float64,1} = fill(0.0, n)
-        for i = 1:(length(idx_p_epistasis)-1)
-            idx_1 = idx_p_epistasis[i]
-            for j = (i+1):length(idx_p_epistasis)
-                idx_2 = idx_p_epistasis[j]
-                epistasis_per_entry .+=
-                    genomes.allele_frequencies[:, idx_1] .*
-                    genomes.allele_frequencies[:, idx_2] .* ξ[idx_1] .* ξ[idx_2]
-            end
-        end
-        epistasis_per_entry
-    end
-    (
-        hcat(
-            additive_effects_per_entry,
-            dominance_effects_per_entry,
-            epistasis_effects_per_entry,
-        ),
-        hcat(α, δ, ξ),
-    )
-end
-
-
-"""
 # Simulate trials
 
 ## Arguments
 - `genomes`: Genome struct includes the `n` entries x `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles)
-- `f_additive`: proportion of the `l` loci with non-zero additive effects on the phenotype
-- `f_dominance`: proportion of the `l*f_additive` additive effects loci with additional dominance effects
-- `f_epistasis`: proportion of the `l*f_additive` additive effects loci with additional epistasis effects
+- `f_add_dom_epi`: `n_traits` x 3 numeric matrix of loci proportion with additive, dominance and epistasis effects, i.e.
+  each column refers to:
+    + `f_additive`: proportion of the `l` loci with non-zero additive effects on the phenotype
+    + `f_dominance`: proportion of the `l*f_additive` additive effects loci with additional dominance effects
+    + `f_epistasis`: proportion of the `l*f_additive` additive effects loci with additional epistasis effects
 - `n_traits`: Number of traits (default = 3)
 - `n_years`: Number of years (default = 2)
 - `n_seasons`: Number of seasons (default = 4)
@@ -260,10 +63,7 @@ true
 """
 function simulatetrials(;
     genomes::Genomes,
-    f_additive::Float64 = 0.05,
-    f_dominance::Float64 = 0.50,
-    f_epistasis::Float64 = 0.25,
-    n_traits::Int64 = 3,
+    f_add_dom_epi::Array{Float64,2} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00],
     n_years::Int64 = 2,
     n_seasons::Int64 = 4,
     n_harvests::Int64 = 2,
@@ -277,14 +77,25 @@ function simulatetrials(;
     seed::Int64 = 42,
     verbose::Bool = true,
 )::Tuple{Trials,Array{SimulatedEffects,1}}
-    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_additive::Float64 = 0.05; f_dominance::Float64 = 0.25; f_epistasis::Float64 = 0.10; n_traits::Int64 = 3; n_years::Int64 = 2; n_seasons::Int64 = 4; n_harvests::Int64 = 2; n_sites::Int64 = 4; n_replications::Int64 = 2; n_blocks::Union{Missing,Int64} = missing; n_rows::Union{Missing,Int64} = missing; n_cols::Union{Missing,Int64} = missing; proportion_of_variance::Union{Missing,Array{Float64,2}} = missing; sparsity::Float64 = 0.25; seed::Int64 = 42; verbose::Bool = false;
+    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_add_dom_epi::Array{Float64,2} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00]; n_years::Int64 = 2; n_seasons::Int64 = 4; n_harvests::Int64 = 2; n_sites::Int64 = 4; n_replications::Int64 = 2; n_blocks::Union{Missing,Int64} = missing; n_rows::Union{Missing,Int64} = missing; n_cols::Union{Missing,Int64} = missing; proportion_of_variance::Union{Missing,Array{Float64,2}} = missing; sparsity::Float64 = 0.25; seed::Int64 = 42; verbose::Bool = false;
     # Argument checks
-    n, field_layout, rng, proportion_of_variance = begin
+    n_traits, n, field_layout, rng, proportion_of_variance = begin
         if !checkdims(genomes)
-            throw(ArgumentError("simulategenomiceffects: error in the genomes input"))
+            throw(ArgumentError("Error in the genomes input"))
         end
+        n_traits::Int64 = size(f_add_dom_epi, 1)
         if (n_traits < 1) || (n_traits > 1e6)
             throw(ArgumentError("We accept `n_traits` from 1 to 1 million."))
+        end
+        if size(f_add_dom_epi, 2) != 3
+            throw(
+                ArgumentError(
+                    "We expect `f_add_dom_epi` to have exactly 3 columns corresponding to the proportion of loci with additive effects, then the poportion of additive loci with dominance and epistasis effects.",
+                ),
+            )
+        end
+        if sum((f_add_dom_epi .< 0.0) .&& (f_add_dom_epi .> 1.0)) != 0
+            throw(ArgumentError("We expect `f_add_dom_epi` values to range from 0.0 to 1.0."))
         end
         if (n_years < 1) || (n_years > 1e6)
             throw(ArgumentError("We accept `n_years` from 1 to 1 million."))
@@ -302,8 +113,12 @@ function simulatetrials(;
             throw(ArgumentError("We accept `n_replications` from 1 to 1 million."))
         end
         # Genomes dimensions
-        n::Int64, n_populations::Int64, p::Int64, l::Int64, max_n_alleles::Int64 =
-            dimensions(genomes)
+        genomes_dims::Dict{String,Int64} = dimensions(genomes)
+        n::Int64 = genomes_dims["n_entries"]
+        n_populations::Int64 = genomes_dims["n_populations"]
+        p::Int64 = genomes_dims["n_loci_alleles"]
+        l::Int64 = genomes_dims["n_loci"]
+        max_n_alleles::Int64 = genomes_dims["max_n_alleles"]
         # Argument checks (continued...)
         if !ismissing(n_blocks)
             if (n * n_replications % n_blocks) > 0
@@ -429,7 +244,7 @@ function simulatetrials(;
         if (sparsity < 0.0) || (sparsity > 1.0)
             throw(ArgumentError("We accept `sparsity` from 0.0 to 1.0."))
         end
-        (n, field_layout, rng, proportion_of_variance)
+        (n_traits, n, field_layout, rng, proportion_of_variance)
     end
     # Instantiate output Trials struct
     n_total::Int64 = n_years * n_seasons * n_harvests * n_sites * n_replications * n
@@ -457,6 +272,9 @@ function simulatetrials(;
             desc = "Simulating trial data: ",
         )
     end
+    seeds_outer::Array{Int64,2} = rand(rng, Int, (n_traits, 7))
+    seeds_inner::Array{Int64,6} =
+        rand(rng, Int, (n_traits, n_years, n_seasons, n_harvests, n_sites, 7))
     for idx_trait = 1:n_traits
         # Trait name
         trials.traits[idx_trait] = string("trait_", idx_trait)
@@ -475,22 +293,31 @@ function simulatetrials(;
         # - B: allele effects per locus-allele combination x additive, dominance, & epistasis
         G::Array{Float64,2}, B::Array{Float64,2} = simulategenomiceffects(
             genomes = genomes,
-            f_additive = f_additive,
-            f_dominance = f_dominance,
-            f_epistasis = f_epistasis,
-            seed = seed,
+            f_additive = f_add_dom_epi[idx_trait, 1],
+            f_dominance = f_add_dom_epi[idx_trait, 2],
+            f_epistasis = f_add_dom_epi[idx_trait, 3],
+            seed = seeds_outer[idx_trait, 1],
         )
         # Additive environmental effects
-        θ_years::Array{Float64,2} = simulateeffects(p = n_years, seed = seed)
-        θ_seasons::Array{Float64,2} = simulateeffects(p = n_seasons, seed = seed)
-        θ_sites::Array{Float64,2} = simulateeffects(p = n_sites, seed = seed)
+        θ_years::Array{Float64,2} =
+            simulateeffects(p = n_years, seed = seeds_outer[idx_trait, 2])
+        θ_seasons::Array{Float64,2} =
+            simulateeffects(p = n_seasons, seed = seeds_outer[idx_trait, 3])
+        θ_sites::Array{Float64,2} =
+            simulateeffects(p = n_sites, seed = seeds_outer[idx_trait, 4])
         # Environmental interaction effects
         θ_seasons_x_year::Array{Float64,2} =
-            simulateeffects(p = n_seasons, q = n_years, seed = seed)
-        θ_harvests_x_season_x_year::Array{Float64,2} =
-            simulateeffects(p = n_harvests, q = n_years * n_seasons, seed = seed)
-        θ_sites_x_harvest_x_season_x_year::Array{Float64,2} =
-            simulateeffects(p = n_sites, q = n_years * n_seasons * n_harvests, seed = seed)
+            simulateeffects(p = n_seasons, q = n_years, seed = seeds_outer[idx_trait, 5])
+        θ_harvests_x_season_x_year::Array{Float64,2} = simulateeffects(
+            p = n_harvests,
+            q = n_years * n_seasons,
+            seed = seeds_outer[idx_trait, 6],
+        )
+        θ_sites_x_harvest_x_season_x_year::Array{Float64,2} = simulateeffects(
+            p = n_sites,
+            q = n_years * n_seasons * n_harvests,
+            seed = seeds_outer[idx_trait, 7],
+        )
         ### Spatial effects (instantiate here then simulate iteratively below for computational efficiency because the covariance matrices of these are usually big)
         θ_replications_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
             fill(0.0, (n_replications, 1)) # replication nested within year, season, harvest, and site
@@ -532,23 +359,86 @@ function simulatetrials(;
             for idx_season = 1:n_seasons
                 for idx_harvest = 1:n_harvests
                     for idx_site = 1:n_sites
-                        θ_replications_x_site_x_harvest_x_season_x_year =
-                            simulateeffects(p = n_replications, seed = seed)
-                        θ_blocks_x_site_x_harvest_x_season_x_year =
-                            simulateeffects(p = n_blocks, seed = seed)
-                        θ_rows_x_site_x_harvest_x_season_x_year =
-                            simulateeffects(p = n_rows, seed = seed)
-                        θ_cols_x_site_x_harvest_x_season_x_year =
-                            simulateeffects(p = n_cols, seed = seed)
+                        θ_replications_x_site_x_harvest_x_season_x_year = simulateeffects(
+                            p = n_replications,
+                            seed = seeds_inner[
+                                idx_trait,
+                                idx_year,
+                                idx_season,
+                                idx_harvest,
+                                idx_site,
+                                1,
+                            ],
+                        )
+                        θ_blocks_x_site_x_harvest_x_season_x_year = simulateeffects(
+                            p = n_blocks,
+                            seed = seeds_inner[
+                                idx_trait,
+                                idx_year,
+                                idx_season,
+                                idx_harvest,
+                                idx_site,
+                                2,
+                            ],
+                        )
+                        θ_rows_x_site_x_harvest_x_season_x_year = simulateeffects(
+                            p = n_rows,
+                            seed = seeds_inner[
+                                idx_trait,
+                                idx_year,
+                                idx_season,
+                                idx_harvest,
+                                idx_site,
+                                3,
+                            ],
+                        )
+                        θ_cols_x_site_x_harvest_x_season_x_year = simulateeffects(
+                            p = n_cols,
+                            seed = seeds_inner[
+                                idx_trait,
+                                idx_year,
+                                idx_season,
+                                idx_harvest,
+                                idx_site,
+                                4,
+                            ],
+                        )
                         θ_additive_allele_x_site_x_harvest_x_season_x_year =
-                            genomes.allele_frequencies[:, idx_additve] *
-                            simulateeffects(p = length(idx_additve), seed = seed)
+                            genomes.allele_frequencies[:, idx_additve] * simulateeffects(
+                                p = length(idx_additve),
+                                seed = seeds_inner[
+                                    idx_trait,
+                                    idx_year,
+                                    idx_season,
+                                    idx_harvest,
+                                    idx_site,
+                                    5,
+                                ],
+                            )
                         θ_dominance_allele_x_site_x_harvest_x_season_x_year =
-                            genomes.allele_frequencies[:, idx_dominance] *
-                            simulateeffects(p = length(idx_dominance), seed = seed)
+                            genomes.allele_frequencies[:, idx_dominance] * simulateeffects(
+                                p = length(idx_dominance),
+                                seed = seeds_inner[
+                                    idx_trait,
+                                    idx_year,
+                                    idx_season,
+                                    idx_harvest,
+                                    idx_site,
+                                    6,
+                                ],
+                            )
                         θ_epistasis_allele_x_site_x_harvest_x_season_x_year =
-                            genomes.allele_frequencies[:, idx_epistasis] *
-                            simulateeffects(p = length(idx_epistasis), seed = seed)
+                            genomes.allele_frequencies[:, idx_epistasis] * simulateeffects(
+                                p = length(idx_epistasis),
+                                seed = seeds_inner[
+                                    idx_trait,
+                                    idx_year,
+                                    idx_season,
+                                    idx_harvest,
+                                    idx_site,
+                                    7,
+                                ],
+                            )
                         for idx_replication = 1:n_replications
                             idx_field_layout::Array{Bool,1} =
                                 field_layout[:, 1] .== idx_replication
