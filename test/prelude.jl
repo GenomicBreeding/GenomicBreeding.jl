@@ -4,6 +4,8 @@ using GenomicBreeding
 
 using Random
 using StatsBase
+using StatsModels
+using MixedModels
 using Distributions
 using LinearAlgebra
 using ProgressMeter

@@ -531,15 +531,15 @@ function simulatetrials(;
                             # Avoid redundancies by assigning the times, sites, and spatial effects IDs once, i.e. on trait 1 only
                             if idx_trait == 1
                                 trials.years[idx_out_ini:idx_out_fin] =
-                                    repeat([effects.id[1]], outer = n)
-                                trials.seasons[idx_out_ini:idx_out_fin] =
                                     repeat([effects.id[2]], outer = n)
-                                trials.harvests[idx_out_ini:idx_out_fin] =
+                                trials.seasons[idx_out_ini:idx_out_fin] =
                                     repeat([effects.id[3]], outer = n)
-                                trials.sites[idx_out_ini:idx_out_fin] =
+                                trials.harvests[idx_out_ini:idx_out_fin] =
                                     repeat([effects.id[4]], outer = n)
-                                trials.replications[idx_out_ini:idx_out_fin] =
+                                trials.sites[idx_out_ini:idx_out_fin] =
                                     repeat([effects.id[5]], outer = n)
+                                trials.replications[idx_out_ini:idx_out_fin] =
+                                    repeat([effects.id[6]], outer = n)
                                 trials.blocks[idx_out_ini:idx_out_fin] =
                                     "Block_" .*
                                     lpad.(

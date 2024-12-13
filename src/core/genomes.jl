@@ -152,7 +152,7 @@ function dimensions(genomes::Genomes)::Dict{String,Int64}
 end
 
 """
-loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Array{Int64,1},Array{String,1},}
+    loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Array{Int64,1},Array{String,1}}
 
 Extract chromosomes, positions, and alleles across loci-allele combinations
 
@@ -184,7 +184,7 @@ end
 
 
 """
-loci(genomes::Genomes)::Tuple{Array{String,1},Array{Int64,1}}
+    loci(genomes::Genomes)::Tuple{Array{String,1},Array{Int64,1},Array{Int64,1},Array{Int64,1}}
 
 Extract chromosome names, positions, start and end indexes of each locus across loci
 
@@ -234,7 +234,69 @@ end
 
 
 """
-    slice(genomes::Genomes)::Tuple{Int64, Int64, Int64}
+    plot(genomes::Genomes)::Nothing
+
+Plot allele frequencies
+
+# Examples
+```
+julia> genomes = simulategenomes(n=100, l=1_000, n_alleles=4, verbose=false);
+
+julia> GenomicBreeding.plot(genomes);
+
+```
+"""
+function plot(genomes::Genomes, seed::Int64 = 42)
+    # genomes = simulategenomes(n=100, l=1_000, n_alleles=3, n_populations=3, μ_β_params=(2.0,2.0), verbose=false); seed::Int64=42;
+    # Per poulation, using min([250, p]) randomly sampled loci plot:
+    #   (1) histogram of allele frequencies per entry,
+    #   (2) histogram of mean allele frequencies per locus, and
+    #   (3) correlation heatmap of allele frequencies.
+    rng::TaskLocalRNG = Random.seed!(seed)
+    for pop in unique(genomes.populations)
+        # pop = genomes.populations[1]
+        p = size(genomes.allele_frequencies, 2)
+        idx_row::Array{Int64,1} = findall(genomes.populations .== pop)
+        idx_col::Array{Int64,1} =
+            StatsBase.sample(rng, 1:p, minimum([250, p]), replace = false, ordered = true)
+        Q = genomes.allele_frequencies[idx_row, idx_col]
+        q::Array{Float64,1} =
+            filter(!ismissing, reshape(Q, (length(idx_row) * length(idx_col), 1)))
+        plt_1 = UnicodePlots.histogram(
+            vcat(q, 1.00 .- q),
+            title = string("Per entry allele frequencies (", pop, ")"),
+            vertical = true,
+            nbins = 50,
+        )
+        display(plt_1)
+        # # Mean allele frequencies across entries unfolded
+        μ_q::Array{Float64,1} = fill(0.0, p)
+        for j = 1:length(idx_col)
+            μ_q[j] = mean(skipmissing(Q[:, j]))
+        end
+        plt_2 = UnicodePlots.histogram(
+            vcat(μ_q, 1.00 .- μ_q),
+            title = string("Mean allele frequencies (", pop, ")"),
+            vertical = true,
+            nbins = 50,
+        )
+        display(plt_2)
+        # Correlation between allele frequencies
+        idx_col = findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)
+        plt_3 = UnicodePlots.heatmap(
+            StatsBase.cor(Q[:, findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)]),
+            height = 50,
+            width = 50,
+            zlabel = string("Pairwise loci correlation (", pop, ")"),
+        )
+        display(plt_3)
+    end
+    nothing
+end
+
+
+"""
+    slice(genomes::Genomes;idx_entries::Array{Int64,1},idx_loci_alleles::Array{Int64,1})::Genomes
 
 Count the number of entries, populations, loci, and maximum number of alleles per locus in the Genomes struct
 
@@ -295,5 +357,33 @@ function slice(
         throw(DimensionMismatch("Error slicing the genome."))
     end
     # Output
-    return (sliced_genomes)
+    sliced_genomes
 end
+
+
+# """
+#     filter(genomes::Genomes; maf::Float64)::Genomes
+
+# Filter Genomes struct by minimum allele frequency
+
+# # Examples
+# ```jldoctest; setup = :(using GenomicBreeding)
+# julia> genomes = simulategenomes(n=100, l=1_000, n_alleles=4, verbose=false);
+
+# ```
+# """
+# function filter(genomes::Genomes; maf::Float64)::Genomes
+#     # genomes::Genomes = simulategenomes(sparsity=0.01, seed=123456); maf=0.01;
+#     if (maf < 0.0) || (maf > 1.0)
+#         throw(ArgumentError("We accept `maf` from 0.0 to 1.0."))
+#     end
+#     q::Array{Float64, 1} = fill(0.0, length(genomes.loci_alleles))
+#     for j in eachindex(q)
+#         q[j] = mean(skipmissing(genomes.allele_frequencies[:, j]))
+#     end
+#     idx::Array{Int64, 1} = findall((q .>= maf) .&& (q .<= (1.0-maf)))
+#     filtered_genomes::Genomes = slice(genomes, idx_entries=collect(1:length(genomes.entries)); idx_loci_alleles=idx);
+
+#     # Output
+#     filtered_genomes
+# end

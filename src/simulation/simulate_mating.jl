@@ -16,7 +16,8 @@ function simulatemating(;
     pop_size_per_gen::Array{Int64,1} = [100],
     seed::Int64 = 42,
 )::Genomes
-    # genomes = simulategenomes(n=1_000); parent_genomes = slice(genomes, idx_entries=collect(1:5), idx_loci_alleles=collect(1:length(genomes.loci_alleles))); n_generations::Int = 10; pop_size_per_gen::Array{Int64,1} = [100]; seed::Int64 = 42;
+    # genomes = simulategenomes(n=1_000, μ_β_params=(0.5,0.5)); parent_genomes = slice(genomes, idx_entries=collect(1:5), idx_loci_alleles=collect(1:length(genomes.loci_alleles))); n_generations::Int = 10; pop_size_per_gen::Array{Int64,1} = [100]; seed::Int64 = 42;
+    # genomes = simulategenomes(n=1_000, μ_β_params=(2.0,2.0)); parent_genomes = slice(genomes, idx_entries=collect(1:5), idx_loci_alleles=collect(1:length(genomes.loci_alleles))); n_generations::Int = 10; pop_size_per_gen::Array{Int64,1} = [100]; seed::Int64 = 42;
     # Check input arguments
     if !checkdims(parent_genomes)
         throw(ArgumentError("Error in the parents' genomes input"))

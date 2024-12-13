@@ -9,7 +9,7 @@
 - `max_pos`: total length of the genome in base-pairs (bp) (default = 135_000_000)
 - `ld_corr_50perc_kb`: distance in bp at which linkage expressed as correlation between a pair of loci is at 50% (default = 1_000)
 - `μ_β_params`: the shape parameters of the Beta distribution from which the mean allele frequencies will be sampled 
-  (default = (0.5, 0.5); U-shaped distribution)
+  (default = (0.5, 0.5); U-shaped distribution; you may use (2.0, 2.0) for a bell-shaped distribution)
 - `sparsity`: Proportion of missing data (default = 0.0)
 - `seed`: psuedo-random number generator seed for replicability (default = 42)
 - `verbose`: Show progress bar and plot the linkage heatmap into an svg file? (default = true)
@@ -279,33 +279,35 @@ function simulategenomes(;
         genomes.allele_frequencies[CartesianIndex.(idx_rows, idx_cols)] .= missing
     end
     if verbose
-        # Plots of population 1 just as an example
-        idx = StatsBase.sample(
-            rng,
-            range(1, p, step = (n_alleles - 1)),
-            250,
-            replace = false,
-            ordered = true,
-        )
-        Q = allele_frequencies[1:population_sizes[1], idx]
-        q::Array{Float64,1} =
-            filter(!ismissing, reshape(Q, (population_sizes[1] * length(idx), 1)))
-        plt_histogram = UnicodePlots.histogram(
-            q,
-            title = "Population 1 allele frequencies",
-            vertical = true,
-            xlim = (0.0, 1.0),
-            nbins = 50,
-        )
-        display(plt_histogram)
-        C = StatsBase.cor(Q[:, findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)])
-        plt_correlation = UnicodePlots.heatmap(
-            C,
-            height = 100,
-            width = 100,
-            zlabel = "Pairwise loci correlation",
-        )
-        display(plt_correlation)
+        # # Plots of population 1 just as an example
+        # idx = StatsBase.sample(
+        #     rng,
+        #     range(1, p, step = (n_alleles - 1)),
+        #     250,
+        #     replace = false,
+        #     ordered = true,
+        # )
+        # Q = allele_frequencies[1:population_sizes[1], idx]
+        # q::Array{Float64,1} =
+        #     filter(!ismissing, reshape(Q, (population_sizes[1] * length(idx), 1)))
+        # append!(q, 1.00 .- q)
+        # plt_histogram = UnicodePlots.histogram(
+        #     q,
+        #     title = "Population 1 allele frequencies",
+        #     vertical = true,
+        #     xlim = (0.0, 1.0),
+        #     nbins = 100,
+        # )
+        # display(plt_histogram)
+        # C = StatsBase.cor(Q[:, findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)])
+        # plt_correlation = UnicodePlots.heatmap(
+        #     C,
+        #     height = 100,
+        #     width = 100,
+        #     zlabel = "Pairwise loci correlation",
+        # )
+        # display(plt_correlation)
+        plot(genomes)
     end
     ### Check dimensions
     if !checkdims(genomes)
