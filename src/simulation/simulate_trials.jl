@@ -63,7 +63,7 @@ true
 """
 function simulatetrials(;
     genomes::Genomes,
-    f_add_dom_epi::Array{Float64,2} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00],
+    f_add_dom_epi::Matrix{Float64} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00],
     n_years::Int64 = 2,
     n_seasons::Int64 = 4,
     n_harvests::Int64 = 2,
@@ -72,12 +72,12 @@ function simulatetrials(;
     n_blocks::Union{Missing,Int64} = missing,
     n_rows::Union{Missing,Int64} = missing,
     n_cols::Union{Missing,Int64} = missing,
-    proportion_of_variance::Union{Missing,Array{Float64,2}} = missing,
+    proportion_of_variance::Union{Missing,Matrix{Float64}} = missing,
     sparsity::Float64 = 0.0,
     seed::Int64 = 42,
     verbose::Bool = true,
 )::Tuple{Trials,Array{SimulatedEffects,1}}
-    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_add_dom_epi::Array{Float64,2} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00]; n_years::Int64 = 2; n_seasons::Int64 = 4; n_harvests::Int64 = 2; n_sites::Int64 = 4; n_replications::Int64 = 2; n_blocks::Union{Missing,Int64} = missing; n_rows::Union{Missing,Int64} = missing; n_cols::Union{Missing,Int64} = missing; proportion_of_variance::Union{Missing,Array{Float64,2}} = missing; sparsity::Float64 = 0.25; seed::Int64 = 42; verbose::Bool = false;
+    # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_add_dom_epi::Matrix{Float64} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00]; n_years::Int64 = 2; n_seasons::Int64 = 4; n_harvests::Int64 = 2; n_sites::Int64 = 4; n_replications::Int64 = 2; n_blocks::Union{Missing,Int64} = missing; n_rows::Union{Missing,Int64} = missing; n_cols::Union{Missing,Int64} = missing; proportion_of_variance::Union{Missing,Matrix{Float64}} = missing; sparsity::Float64 = 0.25; seed::Int64 = 42; verbose::Bool = false;
     # Argument checks
     n_traits, n, field_layout, rng, proportion_of_variance = begin
         if !checkdims(genomes)
@@ -185,7 +185,7 @@ function simulatetrials(;
             end
         end
         n_cols_per_block::Int64 = Int64(n_cols / n_blocks)
-        field_layout::Array{Int64,2} = fill(0, n_rows * n_cols, 4)
+        field_layout::Matrix{Int64} = fill(0, n_rows * n_cols, 4)
         counter = 1
         counter_entries_per_replication = 1
         replication = 1
@@ -214,7 +214,7 @@ function simulatetrials(;
         rng::TaskLocalRNG = Random.seed!(seed)
         # Argument checks (continued...)
         if ismissing(proportion_of_variance)
-            proportion_of_variance::Union{Missing,Array{Float64,2}} = rand(rng, 9, n_traits)
+            proportion_of_variance::Union{Missing,Matrix{Float64}} = rand(rng, 9, n_traits)
             proportion_of_variance[1, :] .= sample(rng, 1:10, n_traits)
         end
         if size(proportion_of_variance) != (9, n_traits)
@@ -272,7 +272,7 @@ function simulatetrials(;
             desc = "Simulating trial data: ",
         )
     end
-    seeds_outer::Array{Int64,2} = rand(rng, Int, (n_traits, 7))
+    seeds_outer::Matrix{Int64} = rand(rng, Int, (n_traits, 7))
     seeds_inner::Array{Int64,6} =
         rand(rng, Int, (n_traits, n_years, n_seasons, n_harvests, n_sites, 7))
     for idx_trait = 1:n_traits
@@ -291,7 +291,7 @@ function simulatetrials(;
         # Genetic effects, where:
         # - G: genetic effects per entry x additive, dominance, & epistasis
         # - B: allele effects per locus-allele combination x additive, dominance, & epistasis
-        G::Array{Float64,2}, B::Array{Float64,2} = simulategenomiceffects(
+        G::Matrix{Float64}, B::Matrix{Float64} = simulategenomiceffects(
             genomes = genomes,
             f_additive = f_add_dom_epi[idx_trait, 1],
             f_dominance = f_add_dom_epi[idx_trait, 2],
@@ -299,57 +299,57 @@ function simulatetrials(;
             seed = seeds_outer[idx_trait, 1],
         )
         # Additive environmental effects
-        θ_years::Array{Float64,2} =
+        θ_years::Matrix{Float64} =
             simulateeffects(p = n_years, seed = seeds_outer[idx_trait, 2])
-        θ_seasons::Array{Float64,2} =
+        θ_seasons::Matrix{Float64} =
             simulateeffects(p = n_seasons, seed = seeds_outer[idx_trait, 3])
-        θ_sites::Array{Float64,2} =
+        θ_sites::Matrix{Float64} =
             simulateeffects(p = n_sites, seed = seeds_outer[idx_trait, 4])
         # Environmental interaction effects
-        θ_seasons_x_year::Array{Float64,2} =
+        θ_seasons_x_year::Matrix{Float64} =
             simulateeffects(p = n_seasons, q = n_years, seed = seeds_outer[idx_trait, 5])
-        θ_harvests_x_season_x_year::Array{Float64,2} = simulateeffects(
+        θ_harvests_x_season_x_year::Matrix{Float64} = simulateeffects(
             p = n_harvests,
             q = n_years * n_seasons,
             seed = seeds_outer[idx_trait, 6],
         )
-        θ_sites_x_harvest_x_season_x_year::Array{Float64,2} = simulateeffects(
+        θ_sites_x_harvest_x_season_x_year::Matrix{Float64} = simulateeffects(
             p = n_sites,
             q = n_years * n_seasons * n_harvests,
             seed = seeds_outer[idx_trait, 7],
         )
         ### Spatial effects (instantiate here then simulate iteratively below for computational efficiency because the covariance matrices of these are usually big)
-        θ_replications_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
+        θ_replications_x_site_x_harvest_x_season_x_year::Matrix{Float64} =
             fill(0.0, (n_replications, 1)) # replication nested within year, season, harvest, and site
-        θ_blocks_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
+        θ_blocks_x_site_x_harvest_x_season_x_year::Matrix{Float64} =
             fill(0.0, (n_blocks, 1)) # block nested within year, season, harvest, and site but across replications
-        θ_rows_x_site_x_harvest_x_season_x_year::Array{Float64,2} = fill(0.0, (n_rows, 1)) # row nested within year, season, harvest, and site but across replications
-        θ_cols_x_site_x_harvest_x_season_x_year::Array{Float64,2} = fill(0.0, (n_cols, 1)) # col nested within year, season, harvest, and site but across replications
+        θ_rows_x_site_x_harvest_x_season_x_year::Matrix{Float64} = fill(0.0, (n_rows, 1)) # row nested within year, season, harvest, and site but across replications
+        θ_cols_x_site_x_harvest_x_season_x_year::Matrix{Float64} = fill(0.0, (n_cols, 1)) # col nested within year, season, harvest, and site but across replications
         # Allele-by-environment interaction effects to these (instantiate here, then simulate iteratively below)
         n_additive::Int64, n_dominance::Int64, n_epistasis::Int64 = sum(B .!= 0.0, dims = 1)
-        idx_additve::Array{Int64,1} = sample(
+        idx_additve::Vector{Int64} = sample(
             rng,
             filter(i -> B[i, 1] != 0.0, 1:size(B, 1)),
             Int64(round(n_additive * σ²_GxE_interactions)),
             replace = false,
         )
-        idx_dominance::Array{Int64,1} = sample(
+        idx_dominance::Vector{Int64} = sample(
             rng,
             filter(i -> B[i, 2] != 0.0, 1:size(B, 1)),
             Int64(round(n_dominance * σ²_GxE_interactions)),
             replace = false,
         )
-        idx_epistasis::Array{Int64,1} = sample(
+        idx_epistasis::Vector{Int64} = sample(
             rng,
             filter(i -> B[i, 3] != 0.0, 1:size(B, 1)),
             Int64(round(n_epistasis * σ²_GxE_interactions)),
             replace = false,
         )
-        θ_additive_allele_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
+        θ_additive_allele_x_site_x_harvest_x_season_x_year::Matrix{Float64} =
             fill(0.0, (n, 1))
-        θ_dominance_allele_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
+        θ_dominance_allele_x_site_x_harvest_x_season_x_year::Matrix{Float64} =
             fill(0.0, (n, 1))
-        θ_epistasis_allele_x_site_x_harvest_x_season_x_year::Array{Float64,2} =
+        θ_epistasis_allele_x_site_x_harvest_x_season_x_year::Matrix{Float64} =
             fill(0.0, (n, 1))
         # Output row counters
         idx_out_ini::Int64 = 1
@@ -440,10 +440,10 @@ function simulatetrials(;
                                 ],
                             )
                         for idx_replication = 1:n_replications
-                            idx_field_layout::Array{Bool,1} =
+                            idx_field_layout::Vector{Bool} =
                                 field_layout[:, 1] .== idx_replication
                             # Randomise the layout of the entries
-                            idx_randomised_entries::Array{Int64,1} =
+                            idx_randomised_entries::Vector{Int64} =
                                 StatsBase.sample(rng, 1:n, n, replace = false)
                             # Define the indexes of the complex interaction effects
                             idx_ys::Int = (idx_year - 1) * n_seasons + idx_season

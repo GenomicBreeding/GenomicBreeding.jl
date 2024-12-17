@@ -118,10 +118,10 @@ function simulategenomes(;
     # Simulate chromosome lengths and number of loci per chromosome
     l1::Int64 = Int64(floor(max_pos / n_chroms))
     l2::Int64 = Int64(floor(l / n_chroms))
-    chrom_lengths::Array{Int64,1} = [
+    chrom_lengths::Vector{Int64} = [
         i < n_chroms ? l1 : l1 * n_chroms < max_pos ? l1 + (max_pos - l1 * n_chroms) : l1 for i = 1:n_chroms
     ]
-    chrom_loci_counts::Array{Int64,1} = [
+    chrom_loci_counts::Vector{Int64} = [
         i < n_chroms ? l2 : l2 * n_chroms < l ? l2 + (l - l2 * n_chroms) : l2 for
         i = 1:n_chroms
     ]
@@ -199,8 +199,8 @@ function simulategenomes(;
     end
     for i = 1:n_chroms
         n_loci::Int64 = chrom_loci_counts[i]
-        pos::Array{Int64,1} = positions[i]
-        Σ::Array{Float64,2} = fill(0.0, (n_loci, n_loci))
+        pos::Vector{Int64} = positions[i]
+        Σ::Matrix{Float64} = fill(0.0, (n_loci, n_loci))
         r::Float64 = log(2.0) / ((ld_corr_50perc_kb * 1_000) / chrom_lengths[i]) # from f(x) = 0.5 = 1 / exp(r*x); where x = normalised distance between loci
         for idx1 = 1:n_loci
             for idx2 = 1:n_loci
@@ -211,10 +211,10 @@ function simulategenomes(;
         for k = 1:n_populations
             # Sample mean allele frequencies per population
             Beta_distibution = Distributions.Beta(μ_β_params[1], μ_β_params[2])
-            μ::Array{Float64,1} = rand(rng, Beta_distibution, n_loci)
+            μ::Vector{Float64} = rand(rng, Beta_distibution, n_loci)
             # Scale the variance-covariance matrix by the allele frequency means
             # such that the closer to fixation (closer to 0.0 or 1.0) the lower the variance
-            idx_greater_than_half::Array{Int64,1} = findall(μ .> 0.5)
+            idx_greater_than_half::Vector{Int64} = findall(μ .> 0.5)
             σ² = copy(μ)
             σ²[idx_greater_than_half] = 1.00 .- μ[idx_greater_than_half]
             Σ .*= σ² * σ²'
@@ -234,9 +234,9 @@ function simulategenomes(;
                 for j in idx_population_groupings[k]
                     idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + a
                     idx_fin = ((n_alleles - 1) * ((locus_counter - 1) + (n_loci - 1))) + a
-                    allele_freqs::Array{Float64,1} = rand(rng, mvnormal_distribution)
+                    allele_freqs::Vector{Float64} = rand(rng, mvnormal_distribution)
                     if a > 1
-                        sum_of_prev_allele_freqs::Array{Float64,1} = fill(0.0, n_loci)
+                        sum_of_prev_allele_freqs::Vector{Float64} = fill(0.0, n_loci)
                         for ap = 1:(a-1)
                             ap_idx_ini = ((n_alleles - 1) * (locus_counter - 1)) + ap
                             ap_idx_fin =
@@ -288,7 +288,7 @@ function simulategenomes(;
         #     ordered = true,
         # )
         # Q = allele_frequencies[1:population_sizes[1], idx]
-        # q::Array{Float64,1} =
+        # q::Vector{Float64} =
         #     filter(!ismissing, reshape(Q, (population_sizes[1] * length(idx), 1)))
         # append!(q, 1.00 .- q)
         # plt_histogram = UnicodePlots.histogram(

@@ -43,7 +43,7 @@ mutable struct Phenomes
     populations::Array{String,1}
     traits::Array{String,1}
     phenotypes::Array{Union{Float64,Missing},2}
-    mask::Array{Bool,2}
+    mask::Matrix{Bool}
     function Phenomes(; n::Int64 = 1, t::Int64 = 2)
         new(fill("", n), fill("", n), fill("", t), fill(missing, n, t), fill(false, n, t))
     end
@@ -83,7 +83,7 @@ function checkdims(y::Phenomes)::Bool
        !isa(y.populations, Array{String,1}) ||
        !isa(y.traits, Array{String,1}) ||
        !isa(y.phenotypes, Array{Union{Float64,Missing},2}) ||
-       !isa(y.mask, Array{Bool,2})
+       !isa(y.mask, Matrix{Bool})
         return false
     end
     return true

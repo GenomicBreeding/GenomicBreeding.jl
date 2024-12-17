@@ -17,5 +17,6 @@ using Dates
 using UnicodePlots
 using Plots
 using StatsPlots
+using Metida
 # Plots.backend(:plotly)
 Plots.backend(:gr)

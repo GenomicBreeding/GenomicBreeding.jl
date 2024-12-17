@@ -10,7 +10,7 @@
 ### REPL prelude
 
 ```shell
-julia --threads 5,1 --load test/prelude.jl
+julia --threads 8,1 --load test/prelude.jl
 ```
 
 ### Format and test
