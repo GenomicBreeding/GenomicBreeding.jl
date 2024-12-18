@@ -26,12 +26,16 @@ include("simulation/simulate_effects.jl")
 include("simulation/simulate_genomes.jl")
 include("simulation/simulate_trials.jl")
 include("simulation/simulate_mating.jl")
+include("io/reader.jl")
+include("io/writer.jl")
+include("models/tebv.jl")
+include("models/ols.jl")
 include("precompile.jl")
 
 export Genomes, Phenomes, Trials, SimulatedEffects
 export checkdims, dimensions, loci_alleles, loci, plot, slice
 export simulategenomes
 export simulateeffects, simulategenomiceffects, simulatetrials
-export tabularise
+export tabularise, definetrialsmodelsfomulae!, @string2formula
 
 end

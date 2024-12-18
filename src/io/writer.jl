@@ -1,5 +1,5 @@
-function write(
-    A::Union{Genomes,Phenomes,Trials,SimulatedEffects},
+function writeJLD2(
+    A::Union{Genomes,Phenomes,Trials,SimulatedEffects};
     fname::Union{Missing,String} = missing,
 )::String
     # A = Genomes()
@@ -43,7 +43,7 @@ function write(
 end
 
 
-function write(
+function writedelimited(
     genomes::Genomes,
     sep::String = "\t",
     fname::Union{Missing,String} = missing,
