@@ -20,7 +20,7 @@ julia> size(df)
 (12800, 134)
 
 julia> length(formulae)
-166
+158
 ```
 """
 function definetrialsmodelsfomulae!(
@@ -206,20 +206,18 @@ function definetrialsmodelsfomulae!(
         formulae = formulae[match.(r"blocks", formulae).==nothing]
     end
     # Remove models with redundant nesters in the main and residual terms
-    idx = findall(
-        [
-            (sum(match.(r"years_x_seasons_x_harvests_x_sites", x) .!= nothing) < 2) && 
-            (sum(match.(r"years_x_seasons_x_sites", x) .!= nothing) < 2) 
-            for x in split.(formulae, " + (")
-        ]
-    )
+    idx = findall([
+        (sum(match.(r"years_x_seasons_x_harvests_x_sites", x) .!= nothing) < 2) &&
+        (sum(match.(r"years_x_seasons_x_sites", x) .!= nothing) < 2) for
+        x in split.(formulae, " + (")
+    ])
     formulae = formulae[idx]
     # Output in addition to the mutated `df`
     formulae
 end
 
 macro string2formula(x)
-     @eval(@formula($(Meta.parse(x))))
+    @eval(@formula($(Meta.parse(x))))
 end
 
 # NOTES: 

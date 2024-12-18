@@ -75,3 +75,8 @@ jobs:
           using GenomicBreeding
           DocMeta.setdocmeta!(GenomicBreeding, :DocTestSetup, :(using GenomicBreeding); recursive=true)
           doctest(GenomicBreeding)
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: jeffersonfparil/GenomicBreeding.jl
