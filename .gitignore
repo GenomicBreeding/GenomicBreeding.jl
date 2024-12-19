@@ -10,3 +10,6 @@ docs/build/
 tmp/
 *.svg
 *.jld2
+*.tsv
+*.csv
+*.txt
