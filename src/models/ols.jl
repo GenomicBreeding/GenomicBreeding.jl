@@ -9,5 +9,5 @@ function ols()
     A = hcat(ones(n, 1), X)
     b_hat = inv(A' * A) * A' * y
     b
-    cor(b_hat[2:end], b)
+    return cor(b_hat[2:end], b)
 end

@@ -52,8 +52,8 @@ mutable struct SimulatedEffects
     dominance_allele_x_site_x_harvest_x_season_x_year::Vector{Float64}
     epistasis_allele_x_site_x_harvest_x_season_x_year::Vector{Float64}
     function SimulatedEffects()
-        new(
-            repeat([""], inner = 6),
+        return new(
+            repeat([""]; inner = 6),
             0.0,
             0.0,
             0.0,
@@ -74,7 +74,6 @@ mutable struct SimulatedEffects
         )
     end
 end
-
 
 """
     checkdims(effects::SimulatedEffects)::Bool
@@ -112,7 +111,6 @@ function checkdims(effects::SimulatedEffects)::Bool
     return true
 end
 
-
 """
     sum(effects::SimulatedEffects)::Tuple{Int64, Int64, Int64}
 
@@ -141,9 +139,8 @@ function Base.sum(effects::SimulatedEffects)::Vector{Float64}
         end
         ϕ .+= getproperty(effects, name)
     end
-    ϕ
+    return ϕ
 end
-
 
 """
 # Simulate effects
@@ -168,12 +165,7 @@ julia> sum(abs.(θ - [-0.0886501800782904; -0.596478483888422])) < 0.00001
 true
 ```
 """
-function simulateeffects(;
-    p::Int64 = 2,
-    q::Int64 = 1,
-    λ::Float64 = 1.00,
-    seed::Int64 = 42,
-)::Matrix{Float64}
+function simulateeffects(; p::Int64 = 2, q::Int64 = 1, λ::Float64 = 1.00, seed::Int64 = 42)::Matrix{Float64}
     # p::Int64 = 20; q::Int64 = 1; λ::Float64 = 1.00; seed::Int64 = 42;
     rng::TaskLocalRNG = Random.seed!(seed)
     μ_dist::Exponential = Distributions.Exponential(λ)
@@ -192,9 +184,8 @@ function simulateeffects(;
     end
     dist::MvNormal = Distributions.MvNormal(μ, Σ)
     X::Matrix{Float64} = rand(rng, dist, q)
-    X
+    return X
 end
-
 
 """
 # Simulate genomic effects
@@ -276,19 +267,16 @@ function simulategenomiceffects(;
     # Set randomisation seed
     rng::TaskLocalRNG = Random.seed!(seed)
     # Define the loci coordinates with non-zero genetic effects
-    idx_additive::Vector{Int64} =
-        StatsBase.sample(rng, 1:l, a, replace = false, ordered = true)
-    idx_dominance::Vector{Int64} =
-        StatsBase.sample(rng, idx_additive, d, replace = false, ordered = true)
-    idx_epistasis::Vector{Int64} =
-        StatsBase.sample(rng, idx_additive, e, replace = false, ordered = true)
+    idx_additive::Vector{Int64} = StatsBase.sample(rng, 1:l, a; replace = false, ordered = true)
+    idx_dominance::Vector{Int64} = StatsBase.sample(rng, idx_additive, d; replace = false, ordered = true)
+    idx_epistasis::Vector{Int64} = StatsBase.sample(rng, idx_additive, e; replace = false, ordered = true)
     # Sample additive allele effects from a multivariate normal distribution with non-spherical covariance matrix
     # Notes:
     #   - We are simulating effects on max_n_alleles - 1 alleles hence assuming the remaining allele has zero relative effect.
     #   - We are using a begin-end block to modularise the additive allele effects simulation and will do the same for the dominance and epistasis allele effects.
     additive_effects_per_entry::Vector{Float64} = begin
         # Simulate the additive allele effects
-        A::Matrix{Float64} = simulateeffects(p = a, q = (max_n_alleles - 1), seed = seed)
+        A::Matrix{Float64} = simulateeffects(; p = a, q = (max_n_alleles - 1), seed = seed)
         # Define the loci-alleles combination indexes corresponding to the additive allele loci
         idx_p_additive::Vector{Int64} = []
         for i = 1:(max_n_alleles-1)
@@ -303,7 +291,7 @@ function simulategenomiceffects(;
     # Sample dominance allele effects from a multivariate normal distribution with non-spherical covariance matrix
     dominance_effects_per_entry::Vector{Float64} = begin
         # Simulate the dominance allele effects
-        D::Matrix{Float64} = simulateeffects(p = d, q = 1, seed = seed)
+        D::Matrix{Float64} = simulateeffects(; p = d, q = 1, seed = seed)
         # Define the loci-alleles combination indexes corresponding to the first allele per locus with a dominance effect
         idx_p_dominance = (idx_dominance * (max_n_alleles - 1)) .- 1
         sort!(idx_p_dominance)
@@ -318,7 +306,7 @@ function simulategenomiceffects(;
     #   - Then we simulate the non-additive or epistasis allele effects by multiplying the allele frequencies of 2 epistasis loci and their effects.
     epistasis_effects_per_entry::Vector{Float64} = begin
         # Simulate the epistasis allele effects
-        E::Matrix{Float64} = simulateeffects(p = e, q = (max_n_alleles - 1), seed = seed)
+        E::Matrix{Float64} = simulateeffects(; p = e, q = (max_n_alleles - 1), seed = seed)
         # Define the loci-alleles combination indexes corresponding to the epistasis allele loci
         idx_p_epistasis::Vector{Int64} = []
         for i = 1:(max_n_alleles-1)
@@ -334,18 +322,10 @@ function simulategenomiceffects(;
             for j = (i+1):length(idx_p_epistasis)
                 idx_2 = idx_p_epistasis[j]
                 epistasis_per_entry .+=
-                    genomes.allele_frequencies[:, idx_1] .*
-                    genomes.allele_frequencies[:, idx_2] .* ξ[idx_1] .* ξ[idx_2]
+                    genomes.allele_frequencies[:, idx_1] .* genomes.allele_frequencies[:, idx_2] .* ξ[idx_1] .* ξ[idx_2]
             end
         end
         epistasis_per_entry
     end
-    (
-        hcat(
-            additive_effects_per_entry,
-            dominance_effects_per_entry,
-            epistasis_effects_per_entry,
-        ),
-        hcat(α, δ, ξ),
-    )
+    return (hcat(additive_effects_per_entry, dominance_effects_per_entry, epistasis_effects_per_entry), hcat(α, δ, ξ))
 end

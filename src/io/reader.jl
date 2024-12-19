@@ -5,13 +5,9 @@ function read(type::Type{Genomes}, fname::Union{Missing,String} = missing)::Geno
     end
     genomes::Genomes = load(fname)["genomes"]
     if !checkdims(genomes)
-        throw(
-            DimensionMismatch(
-                "Genomes struct from the JLD2 file: " * fname * " is corrupted.",
-            ),
-        )
+        throw(DimensionMismatch("Genomes struct from the JLD2 file: " * fname * " is corrupted."))
     end
-    genomes
+    return genomes
 end
 
 function read(type::Type{Phenomes}, fname::Union{Missing,String} = missing)::Phenomes
@@ -27,11 +23,7 @@ function read(type::Type{Phenomes}, fname::Union{Missing,String} = missing)::Phe
     end
     genomes::Phenomes = load(fname)["phenomes"]
     if !checkdims(phenomes)
-        throw(
-            DimensionMismatch(
-                "Phenomes struct from the JLD2 file: " * fname * " is corrupted.",
-            ),
-        )
+        throw(DimensionMismatch("Phenomes struct from the JLD2 file: " * fname * " is corrupted."))
     end
-    genomes
+    return genomes
 end

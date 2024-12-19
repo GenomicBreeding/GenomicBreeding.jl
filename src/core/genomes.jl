@@ -45,7 +45,7 @@ mutable struct Genomes
     allele_frequencies::Array{Union{Float64,Missing},2}
     mask::Matrix{Bool}
     function Genomes(; n::Int64 = 1, p::Int64 = 2)
-        new(fill("", n), fill("", n), fill("", p), fill(missing, n, p), fill(false, n, p))
+        return new(fill("", n), fill("", n), fill("", p), fill(missing, n, p), fill(false, n, p))
     end
 end
 
@@ -127,8 +127,7 @@ function dimensions(genomes::Genomes)::Dict{String,Int64}
             n_chr += 1
             n_loci += 1
         else
-            if ((chr == locus_ids[1]) && (pos != parse(Int64, locus_ids[2]))) ||
-               (chr != locus_ids[1])
+            if ((chr == locus_ids[1]) && (pos != parse(Int64, locus_ids[2]))) || (chr != locus_ids[1])
                 if chr != locus_ids[1]
                     n_chr += 1
                 end
@@ -137,11 +136,10 @@ function dimensions(genomes::Genomes)::Dict{String,Int64}
                 n_alleles = length(split(locus_ids[3], '|'))
                 max_n_alleles = max_n_alleles < n_alleles ? n_alleles : max_n_alleles
                 n_loci += 1
-
             end
         end
     end
-    Dict(
+    return Dict(
         "n_entries" => n_entries,
         "n_populations" => n_populations,
         "n_loci_alleles" => n_loci_alleles,
@@ -166,9 +164,7 @@ julia> length(chromsomes), length(positions), length(alleles)
 (3000, 3000, 3000)
 ```
 """
-function loci_alleles(
-    genomes::Genomes,
-)::Tuple{Array{String,1},Vector{Int64},Array{String,1}}
+function loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Array{String,1}}
     chromosomes::Array{String,1} = []
     positions::Vector{Int64} = []
     alleles::Array{String,1} = []
@@ -179,9 +175,8 @@ function loci_alleles(
         push!(positions, parse(Int64, locus_ids[2]))
         push!(alleles, locus_ids[4])
     end
-    (chromosomes, positions, alleles)
+    return (chromosomes, positions, alleles)
 end
-
 
 """
     loci(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Vector{Int64},Vector{Int64}}
@@ -198,9 +193,7 @@ julia> length(chromsomes), length(positions), length(loci_ini_idx), length(loci_
 (1000, 1000, 1000, 1000)
 ```
 """
-function loci(
-    genomes::Genomes,
-)::Tuple{Array{String,1},Vector{Int64},Vector{Int64},Vector{Int64}}
+function loci(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Vector{Int64},Vector{Int64}}
     chromosomes::Array{String,1} = []
     positions::Vector{Int64} = []
     loci_ini_idx::Vector{Int64} = []
@@ -215,10 +208,8 @@ function loci(
             push!(positions, parse(Int64, locus_ids[2]))
             push!(loci_ini_idx, idx)
         else
-            if (
-                (chromosomes[end] == locus_ids[1]) &&
-                (positions[end] != parse(Int64, locus_ids[2]))
-            ) || (chromosomes[end] != locus_ids[1])
+            if ((chromosomes[end] == locus_ids[1]) && (positions[end] != parse(Int64, locus_ids[2]))) ||
+               (chromosomes[end] != locus_ids[1])
                 push!(chromosomes, locus_ids[1])
                 push!(positions, parse(Int64, locus_ids[2]))
                 push!(loci_ini_idx, idx)
@@ -229,9 +220,8 @@ function loci(
     if loci_fin_idx[end] < length(genomes.loci_alleles)
         push!(loci_fin_idx, length(genomes.loci_alleles))
     end
-    (chromosomes, positions, loci_ini_idx, loci_fin_idx)
+    return (chromosomes, positions, loci_ini_idx, loci_fin_idx)
 end
-
 
 """
     plot(genomes::Genomes)::Nothing
@@ -257,13 +247,11 @@ function plot(genomes::Genomes, seed::Int64 = 42)
         # pop = genomes.populations[1]
         p = size(genomes.allele_frequencies, 2)
         idx_row::Vector{Int64} = findall(genomes.populations .== pop)
-        idx_col::Vector{Int64} =
-            StatsBase.sample(rng, 1:p, minimum([250, p]), replace = false, ordered = true)
+        idx_col::Vector{Int64} = StatsBase.sample(rng, 1:p, minimum([250, p]); replace = false, ordered = true)
         Q = genomes.allele_frequencies[idx_row, idx_col]
-        q::Vector{Float64} =
-            filter(!ismissing, reshape(Q, (length(idx_row) * length(idx_col), 1)))
+        q::Vector{Float64} = filter(!ismissing, reshape(Q, (length(idx_row) * length(idx_col), 1)))
         plt_1 = UnicodePlots.histogram(
-            vcat(q, 1.00 .- q),
+            vcat(q, 1.00 .- q);
             title = string("Per entry allele frequencies (", pop, ")"),
             vertical = true,
             nbins = 50,
@@ -275,25 +263,24 @@ function plot(genomes::Genomes, seed::Int64 = 42)
             μ_q[j] = mean(skipmissing(Q[:, j]))
         end
         plt_2 = UnicodePlots.histogram(
-            vcat(μ_q, 1.00 .- μ_q),
+            vcat(μ_q, 1.00 .- μ_q);
             title = string("Mean allele frequencies (", pop, ")"),
             vertical = true,
             nbins = 50,
         )
         display(plt_2)
         # Correlation between allele frequencies
-        idx_col = findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)
+        idx_col = findall(sum(ismissing.(Q); dims = 1)[1, :] .== 0)
         plt_3 = UnicodePlots.heatmap(
-            StatsBase.cor(Q[:, findall(sum(ismissing.(Q), dims = 1)[1, :] .== 0)]),
+            StatsBase.cor(Q[:, findall(sum(ismissing.(Q); dims = 1)[1, :] .== 0)]);
             height = 50,
             width = 50,
             zlabel = string("Pairwise loci correlation (", pop, ")"),
         )
         display(plt_3)
     end
-    nothing
+    return nothing
 end
-
 
 """
     slice(genomes::Genomes;idx_entries::Vector{Int64},idx_loci_alleles::Vector{Int64})::Genomes
@@ -316,11 +303,7 @@ Dict{String, Int64} with 6 entries:
   "max_n_alleles"  => 4
 ```
 """
-function slice(
-    genomes::Genomes;
-    idx_entries::Vector{Int64},
-    idx_loci_alleles::Vector{Int64},
-)::Genomes
+function slice(genomes::Genomes; idx_entries::Vector{Int64}, idx_loci_alleles::Vector{Int64})::Genomes
     # genomes::Genomes = simulategenomes(); idx_entries::Vector{Int64}=sample(1:100, 10); idx_loci_alleles::Vector{Int64}=sample(1:10_000, 1000);
     genomes_dims::Dict{String,Int64} = dimensions(genomes)
     n_entries::Int64 = genomes_dims["n_entries"]
@@ -329,18 +312,14 @@ function slice(
         throw(ArgumentError("We accept `idx_entries` from 1 to `n_entries` of `genomes`."))
     end
     if (minimum(idx_loci_alleles) < 1) || (maximum(idx_loci_alleles) > n_loci_alleles)
-        throw(
-            ArgumentError(
-                "We accept `idx_loci_alleles` from 1 to `n_loci_alleles` of `genomes`.",
-            ),
-        )
+        throw(ArgumentError("We accept `idx_loci_alleles` from 1 to `n_loci_alleles` of `genomes`."))
     end
     sort!(idx_entries)
     sort!(idx_loci_alleles)
     unique!(idx_entries)
     unique!(idx_loci_alleles)
     n, p = length(idx_entries), length(idx_loci_alleles)
-    sliced_genomes::Genomes = Genomes(n = n, p = p)
+    sliced_genomes::Genomes = Genomes(; n = n, p = p)
     for (i1, i2) in enumerate(idx_entries)
         sliced_genomes.entries[i1] = genomes.entries[i2]
         sliced_genomes.populations[i1] = genomes.populations[i2]
@@ -357,9 +336,8 @@ function slice(
         throw(DimensionMismatch("Error slicing the genome."))
     end
     # Output
-    sliced_genomes
+    return sliced_genomes
 end
-
 
 # """
 #     filter(genomes::Genomes; maf::Float64)::Genomes

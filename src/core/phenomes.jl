@@ -45,7 +45,7 @@ mutable struct Phenomes
     phenotypes::Array{Union{Float64,Missing},2}
     mask::Matrix{Bool}
     function Phenomes(; n::Int64 = 1, t::Int64 = 2)
-        new(fill("", n), fill("", n), fill("", t), fill(missing, n, t), fill(false, n, t))
+        return new(fill("", n), fill("", n), fill("", t), fill(missing, n, t), fill(false, n, t))
     end
 end
 

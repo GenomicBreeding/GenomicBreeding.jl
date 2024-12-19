@@ -1,3 +1,4 @@
+# TODO: update with new functions
 g = Genomes()
 p = Phenomes()
 t = Trials()
@@ -7,8 +8,8 @@ checkdims(p)
 checkdims(t)
 checkdims(e)
 
-genomes = simulategenomes(n = 1, l = 2, n_chroms = 1, verbose = false)
+genomes = simulategenomes(; n = 1, l = 2, n_chroms = 1, verbose = false)
 dimensions(genomes)
 simulateeffects()
-simulategenomiceffects(genomes = genomes)
-trials, vector_of_effects = simulatetrials(genomes = genomes, verbose = false)
+simulategenomiceffects(; genomes = genomes)
+trials, vector_of_effects = simulatetrials(; genomes = genomes, verbose = false)

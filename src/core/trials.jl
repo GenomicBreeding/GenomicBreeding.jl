@@ -46,7 +46,7 @@ mutable struct Trials
     entries::Array{String,1}
     populations::Array{String,1}
     function Trials(; n::Int64 = 2, t::Int64 = 2)
-        new(
+        return new(
             fill(missing, n, t),
             Array{String,1}(undef, t),
             Array{String,1}(undef, n),
@@ -98,12 +98,12 @@ function checkdims(trials::Trials)::Bool
        (n != length(trials.populations))
         return false
     end
-    true
+    return true
 end
 
 function tabularise(trials::Trials)::DataFrame
     # trials::Trials, _ = simulatetrials(genomes = simulategenomes());
-    df_ids::DataFrame = DataFrame(
+    df_ids::DataFrame = DataFrame(;
         id = 1:length(trials.years),
         years = trials.years,
         seasons = trials.seasons,
@@ -119,8 +119,8 @@ function tabularise(trials::Trials)::DataFrame
     df_phe::DataFrame = DataFrame(trials.phenotypes, :auto)
     rename!(df_phe, trials.traits)
     df_phe.id = 1:length(trials.years)
-    df = innerjoin(df_ids, df_phe, on = :id)
-    df
+    df = innerjoin(df_ids, df_phe; on = :id)
+    return df
 end
 
 # # TODO: plot raw data
@@ -129,7 +129,6 @@ end
 #     df::DataFrame = tabularise(trials)
 #     cor(trials.phenotypes)
 #     plt = corrplot(trials.phenotypes)
-
 
 #     false
 # end

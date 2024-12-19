@@ -36,6 +36,8 @@ export Genomes, Phenomes, Trials, SimulatedEffects
 export checkdims, dimensions, loci_alleles, loci, plot, slice
 export simulategenomes
 export simulateeffects, simulategenomiceffects, simulatetrials
-export tabularise, definetrialsmodelsfomulae!, @string2formula
+export tabularise
+export countlevels, @string2formula, trialsmodelsfomulae!, analyse
+export writeJLD2
 
 end
