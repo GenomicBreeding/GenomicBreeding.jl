@@ -75,6 +75,68 @@ mutable struct SimulatedEffects
     end
 end
 
+
+"""
+    Base.hash(x::SimulatedEffects, h::UInt)::UInt
+
+Hash a SimulatedEffects struct.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> effects = SimulatedEffects();
+
+julia> hash(effects)
+0x7a45ab9b3613fe9c
+```
+"""
+function Base.hash(x::SimulatedEffects, h::UInt)::UInt
+    hash(SimulatedEffects,
+    hash(x.id,
+    hash(x.year,
+    hash(x.season,
+    hash(x.site,
+    hash(x.seasons_x_year,
+    hash(x.harvests_x_season_x_year,
+    hash(x.sites_x_harvest_x_season_x_year,
+    hash(x.field_layout,
+    hash(x.replications_x_site_x_harvest_x_season_x_year,
+    hash(x.blocks_x_site_x_harvest_x_season_x_year,
+    hash(x.rows_x_site_x_harvest_x_season_x_year,
+    hash(x.cols_x_site_x_harvest_x_season_x_year,
+    hash(x.additive_genetic,
+    hash(x.dominance_genetic,
+    hash(x.epistasis_genetic,
+    hash(x.additive_allele_x_site_x_harvest_x_season_x_year,
+    hash(x.dominance_allele_x_site_x_harvest_x_season_x_year,
+    hash(x.epistasis_allele_x_site_x_harvest_x_season_x_year, h)))))))))))))))))))
+end
+
+
+"""
+    Base.:(==)(x::SimulatedEffects, y::SimulatedEffects)::Bool
+
+Equality of SimulatedEffects structs using the hash function defined for SimulatedEffects structs.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> effects_1 = SimulatedEffects();
+
+julia> effects_2 = SimulatedEffects();
+
+julia> effects_3 = SimulatedEffects(); effects_3.id[1] = "SOMETHING_ELSE";
+
+julia> effects_1 == effects_2
+true
+
+julia> effects_1 == effects_3
+false
+```
+"""
+function Base.:(==)(x::SimulatedEffects, y::SimulatedEffects)::Bool
+    hash(x) == hash(y)
+end
+
+
 """
     checkdims(effects::SimulatedEffects)::Bool
 

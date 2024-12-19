@@ -50,6 +50,51 @@ mutable struct Genomes
 end
 
 """
+    Base.hash(x::Genomes, h::UInt)::UInt
+
+Hash a Genomes struct using the entries, populations and loci_alleles.
+We deliberately excluded the allele_frequencies, and mask for efficiency.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes = Genomes(n=2, p=2);
+
+julia> hash(genomes)
+0x78cf76f7360d8887
+```
+"""
+function Base.hash(x::Genomes, h::UInt)::UInt
+    # hash(Genomes, hash(x.entries, hash(x.populations, hash(x.loci_alleles, hash(x.allele_frequencies, hash(x.mask, h))))))
+    hash(Genomes, hash(x.entries, hash(x.populations, hash(x.loci_alleles, h))))
+end
+
+
+"""
+    Base.:(==)(x::Genomes, y::Genomes)::Bool
+
+Equality of Genomes structs using the hash function defined for Genomes structs.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes_1 = genomes = Genomes(n=2,p=4);
+
+julia> genomes_2 = genomes = Genomes(n=2,p=4);
+
+julia> genomes_3 = genomes = Genomes(n=1,p=2);
+
+julia> genomes_1 == genomes_2
+true
+
+julia> genomes_1 == genomes_3
+false
+```
+"""
+function Base.:(==)(x::Genomes, y::Genomes)::Bool
+    hash(x) == hash(y)
+end
+
+
+"""
     checkdims(genomes::Genomes)::Bool
 
 Check dimension compatibility of the fields of the Genomes struct

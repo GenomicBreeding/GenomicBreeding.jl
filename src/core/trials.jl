@@ -26,7 +26,7 @@ Trials(; n::Int64 = 2, p::Int64 = 2)
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> trials = Trials(n=1, t=2)
-Trials(Union{Missing, Float64}[missing missing], [#undef, #undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef], [#undef])
+Trials(Union{Missing, Float64}[missing missing], ["", ""], [""], [""], [""], [""], [""], [""], [""], [""], [""], [""])
 
 julia> fieldnames(Trials)
 (:phenotypes, :traits, :years, :seasons, :harvests, :sites, :replications, :blocks, :rows, :cols, :entries, :populations)
@@ -48,20 +48,64 @@ mutable struct Trials
     function Trials(; n::Int64 = 2, t::Int64 = 2)
         return new(
             fill(missing, n, t),
-            Vector{String}(undef, t),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
-            Vector{String}(undef, n),
+            fill("", t),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
+            fill("", n),
         )
     end
 end
+
+
+"""
+    Base.hash(x::Trials, h::UInt)::UInt
+
+Hash a Trials struct.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> trials = Trials(n=2, t=2);
+
+julia> hash(trials)
+0x0b8a0916b19be2b1
+```
+"""
+function Base.hash(x::Trials, h::UInt)::UInt
+    hash(Trials, hash(x.phenotypes, hash(x.traits, hash(x.years, hash(x.seasons, hash(x.harvests, hash(x.sites, hash(x.replications, hash(x.blocks, hash(x.rows, hash(x.cols, hash(x.entries, hash(x.populations, h)))))))))))))
+end
+
+
+"""
+    Base.:(==)(x::Trials, y::Trials)::Bool
+
+Equality of Trials structs using the hash function defined for Trials structs.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> trials_1 = trials = Trials(n=2, t=4);
+
+julia> trials_2 = trials = Trials(n=2, t=4);
+
+julia> trials_3 = trials = Trials(n=1, t=2);
+
+julia> trials_1 == trials_2
+true
+
+julia> trials_1 == trials_3
+false
+```
+"""
+function Base.:(==)(x::Trials, y::Trials)::Bool
+    hash(x) == hash(y)
+end
+
 
 """
     checkdims(trials::Trials)::Bool

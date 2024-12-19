@@ -49,6 +49,50 @@ mutable struct Phenomes
     end
 end
 
+
+"""
+    Base.hash(x::Phenomes, h::UInt)::UInt
+
+Hash a Phenomes struct.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> phenomes = Phenomes(n=2, t=2);
+
+julia> hash(phenomes)
+0x55d87bb9d60ad2d9
+```
+"""
+function Base.hash(x::Phenomes, h::UInt)::UInt
+    hash(Phenomes, hash(x.entries, hash(x.populations, hash(x.traits, hash(x.phenotypes, hash(x.mask, h))))))
+end
+
+
+"""
+    Base.:(==)(x::Phenomes, y::Phenomes)::Bool
+
+Equality of Phenomes structs using the hash function defined for Phenomes structs.
+
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> phenomes_1 = phenomes = Phenomes(n=2, t=4);
+
+julia> phenomes_2 = phenomes = Phenomes(n=2, t=4);
+
+julia> phenomes_3 = phenomes = Phenomes(n=1, t=2);
+
+julia> phenomes_1 == phenomes_2
+true
+
+julia> phenomes_1 == phenomes_3
+false
+```
+"""
+function Base.:(==)(x::Phenomes, y::Phenomes)::Bool
+    hash(x) == hash(y)
+end
+
+
 """
     checkdims(y::Phenomes)::Bool
 

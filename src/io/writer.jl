@@ -26,9 +26,22 @@ julia> simulated_effects = SimulatedEffects();
 
 julia> writeJLD2(simulated_effects, fname="test_simulated_effects.jld2")
 "test_simulated_effects.jld2"
+
+julia> trials, _simulated_effects = simulatetrials(genomes = simulategenomes(n=10, verbose=false), n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=10, verbose=false);
+
+julia> tebv = analyse(trials, max_levels=50, verbose=false);
+
+julia> writeJLD2(tebv, fname="test_tebv.jld2")
+"test_tebv.jld2"
+
+x  = load("test_tebv.jld2")["TEBV"]
+typeof(x)
+typeof(tebv)
+x == tebv
+
 ```
 """
-function writeJLD2(A::Union{Genomes,Phenomes,Trials,SimulatedEffects}; fname::Union{Missing,String} = missing)::String
+function writeJLD2(A::Union{Genomes,Phenomes,Trials,SimulatedEffects,TEBV}; fname::Union{Missing,String} = missing)::String
     # Check input arguments
     if !checkdims(A)
         throw(DimensionMismatch(string(typeof(A)) * " input is corrupted."))
