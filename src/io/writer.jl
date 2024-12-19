@@ -103,13 +103,13 @@ function writedelimited(genomes::Genomes; sep::String = "\t", fname::Union{Missi
     # Write into a new text file
     open(fname, "w") do file
         # Header line
-        header::Array{String,1} = ["chrom", "pos", "all_alleles", "allele"]
+        header::Vector{String} = ["chrom", "pos", "all_alleles", "allele"]
         append!(header, genomes.entries)
         header[end] *= "\n"
         write(file, join(header, sep))
         # Rest of the data
         for i = 1:length(genomes.loci_alleles)
-            line::Array{String,1} = [string(x) for x in split(genomes.loci_alleles[i], "\t")]
+            line::Vector{String} = [string(x) for x in split(genomes.loci_alleles[i], "\t")]
             append!(line, [string(x) for x in genomes.allele_frequencies[:, i]])
             line[end] *= "\n"
             write(file, join(line, sep))
@@ -168,14 +168,14 @@ function writedelimited(phenomes::Phenomes; sep::String = "\t", fname::Union{Mis
     # Write into a new text file
     open(fname, "w") do file
         # Header line
-        header::Array{String,1} = ["entry", "population"]
+        header::Vector{String} = ["entry", "population"]
         append!(header, phenomes.traits)
         header[end] *= "\n"
         write(file, join(header, sep))
         # Rest of the data
         for i in eachindex(phenomes.entries)
 
-            line::Array{String,1} = [phenomes.entries[i], phenomes.populations[i]]
+            line::Vector{String} = [phenomes.entries[i], phenomes.populations[i]]
             append!(line, string.(phenomes.phenotypes[i, :]))
             line[end] *= "\n"
             write(file, join(line, sep))
@@ -235,13 +235,35 @@ function writedelimited(trials::Trials; sep::String = "\t", fname::Union{Missing
     # Write into a new text file
     open(fname, "w") do file
         # Header line
-        header::Array{String,1} = ["years", "seasons", "harvests", "sites", "entries", "populations", "replications", "blocks", "rows", "cols"]
+        header::Vector{String} = [
+            "years",
+            "seasons",
+            "harvests",
+            "sites",
+            "entries",
+            "populations",
+            "replications",
+            "blocks",
+            "rows",
+            "cols",
+        ]
         append!(header, trials.traits)
         header[end] *= "\n"
         write(file, join(header, sep))
         # Rest of the data
         for i in eachindex(trials.entries)
-            line::Array{String,1} = [trials.years[i], trials.seasons[i], trials.harvests[i], trials.sites[i], trials.entries[i], trials.populations[i], trials.replications[i], trials.blocks[i], trials.rows[i], trials.cols[i]]
+            line::Vector{String} = [
+                trials.years[i],
+                trials.seasons[i],
+                trials.harvests[i],
+                trials.sites[i],
+                trials.entries[i],
+                trials.populations[i],
+                trials.replications[i],
+                trials.blocks[i],
+                trials.rows[i],
+                trials.cols[i],
+            ]
             append!(line, string.(trials.phenotypes[i, :]))
             line[end] *= "\n"
             write(file, join(line, sep))

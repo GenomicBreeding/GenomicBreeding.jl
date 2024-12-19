@@ -35,7 +35,6 @@ t = Template(;
     plugins=[
         License(; name="GPL-3.0+", path=nothing, destination="LICENSE.md"),
         CompatHelper(),
-        Codecov(),    
         GitHubActions(;
         osx=false,
         windows=false,

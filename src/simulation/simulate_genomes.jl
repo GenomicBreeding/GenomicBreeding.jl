@@ -127,18 +127,18 @@ function simulategenomes(;
         end for i = 1:n_chroms
     ]
     # Simulate loci-alleles combinations coordinates
-    allele_choices::Array{String,1} = ["A", "T", "C", "G", "D"]
+    allele_choices::Vector{String} = ["A", "T", "C", "G", "D"]
     allele_weights::Weights{Float64,Float64,Vector{Float64}} =
         StatsBase.Weights([1.0, 1.0, 1.0, 1.0, 0.1] / sum([1.0, 1.0, 1.0, 1.0, 0.1]))
     positions::Array{Array{Int64},1} = fill(Int64[], n_chroms)
     locus_counter::Int64 = 1
-    loci_alleles::Array{String,1} = Array{String,1}(undef, p)
+    loci_alleles::Vector{String} = Vector{String}(undef, p)
     for i = 1:n_chroms
         positions[i] = StatsBase.sample(rng, 1:chrom_lengths[i], chrom_loci_counts[i]; replace = false, ordered = true)
         for pos in positions[i]
-            all_alleles::Array{String,1} =
+            all_alleles::Vector{String} =
                 StatsBase.sample(rng, allele_choices, allele_weights, n_alleles; replace = false, ordered = false)
-            alleles::Array{String,1} =
+            alleles::Vector{String} =
                 StatsBase.sample(rng, all_alleles, n_alleles - 1; replace = false, ordered = false)
             for j in eachindex(alleles)
                 loci_alleles[locus_counter] = join([string("chrom_", i), pos, join(all_alleles, "|"), alleles[j]], "\t")
@@ -163,7 +163,7 @@ function simulategenomes(;
         end
     end
     # Simulate allele frequencies with linkage disequillibrium by sampling from a multivariate normal distribution with non-spherical variance-covariance matrix
-    allele_frequencies::Array{Union{Float64,Missing},2} = fill(missing, n, p)
+    allele_frequencies::Matrix{Union{Float64,Missing}} = fill(missing, n, p)
     locus_counter = 1
     if verbose
         pb = ProgressMeter.Progress(n_chroms * n * (n_alleles - 1); desc = "Simulating allele frequencies: ")

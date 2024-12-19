@@ -33,32 +33,32 @@ julia> fieldnames(Trials)
 ```
 """
 mutable struct Trials
-    phenotypes::Array{Union{Float64,Missing},2}
-    traits::Array{String,1}
-    years::Array{String,1}
-    seasons::Array{String,1}
-    harvests::Array{String,1}
-    sites::Array{String,1}
-    replications::Array{String,1}
-    blocks::Array{String,1}
-    rows::Array{String,1}
-    cols::Array{String,1}
-    entries::Array{String,1}
-    populations::Array{String,1}
+    phenotypes::Matrix{Union{Float64,Missing}}
+    traits::Vector{String}
+    years::Vector{String}
+    seasons::Vector{String}
+    harvests::Vector{String}
+    sites::Vector{String}
+    replications::Vector{String}
+    blocks::Vector{String}
+    rows::Vector{String}
+    cols::Vector{String}
+    entries::Vector{String}
+    populations::Vector{String}
     function Trials(; n::Int64 = 2, t::Int64 = 2)
         return new(
             fill(missing, n, t),
-            Array{String,1}(undef, t),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
-            Array{String,1}(undef, n),
+            Vector{String}(undef, t),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
+            Vector{String}(undef, n),
         )
     end
 end

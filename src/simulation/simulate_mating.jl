@@ -32,10 +32,10 @@ function simulatemating(;
     # Set randomisation seed
     rng::TaskLocalRNG = Random.seed!(seed)
     # Extract loci names
-    chromosomes_per_locus_allele::Array{String,1}, _, _ = loci_alleles(parent_genomes)
-    chromosomes_per_locus::Array{String,1}, _, loci_ini_idx::Vector{Int64}, loci_fin_idx::Vector{Int64} =
+    chromosomes_per_locus_allele::Vector{String}, _, _ = loci_alleles(parent_genomes)
+    chromosomes_per_locus::Vector{String}, _, loci_ini_idx::Vector{Int64}, loci_fin_idx::Vector{Int64} =
         loci(parent_genomes)
-    unique_chromosomes::Array{String,1} = unique(chromosomes_per_locus)
+    unique_chromosomes::Vector{String} = unique(chromosomes_per_locus)
     # Iterate across generations
     histallelefreqs(parent_genomes)
     for t = 1:n_generations

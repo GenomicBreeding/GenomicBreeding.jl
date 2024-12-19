@@ -39,10 +39,10 @@ Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1_12345_A|T_A", "chr2_6
 ```
 """
 mutable struct Genomes
-    entries::Array{String,1}
-    populations::Array{String,1}
-    loci_alleles::Array{String,1}
-    allele_frequencies::Array{Union{Float64,Missing},2}
+    entries::Vector{String}
+    populations::Vector{String}
+    loci_alleles::Vector{String}
+    allele_frequencies::Matrix{Union{Float64,Missing}}
     mask::Matrix{Bool}
     function Genomes(; n::Int64 = 1, p::Int64 = 2)
         return new(fill("", n), fill("", n), fill("", p), fill(missing, n, p), fill(false, n, p))
@@ -79,10 +79,10 @@ function checkdims(genomes::Genomes)::Bool
        ((n, p) != size(genomes.mask))
         return false
     end
-    if !isa(genomes.entries, Array{String,1}) ||
-       !isa(genomes.populations, Array{String,1}) ||
-       !isa(genomes.loci_alleles, Array{String,1}) ||
-       !isa(genomes.allele_frequencies, Array{Union{Float64,Missing},2}) ||
+    if !isa(genomes.entries, Vector{String}) ||
+       !isa(genomes.populations, Vector{String}) ||
+       !isa(genomes.loci_alleles, Vector{String}) ||
+       !isa(genomes.allele_frequencies, Matrix{Union{Float64,Missing}}) ||
        !isa(genomes.mask, Matrix{Bool})
         return false
     end
@@ -119,7 +119,7 @@ function dimensions(genomes::Genomes)::Dict{String,Int64}
     pos::Int64 = 0
     for locus in genomes.loci_alleles
         # locus = genomes.loci_alleles[1]
-        locus_ids::Array{String,1} = split(locus, '\t')
+        locus_ids::Vector{String} = split(locus, '\t')
         if n_loci == 0
             chr = locus_ids[1]
             pos = parse(Int64, locus_ids[2])
@@ -150,7 +150,7 @@ function dimensions(genomes::Genomes)::Dict{String,Int64}
 end
 
 """
-    loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Array{String,1}}
+    loci_alleles(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{String}}
 
 Extract chromosomes, positions, and alleles across loci-allele combinations
 
@@ -164,13 +164,13 @@ julia> length(chromsomes), length(positions), length(alleles)
 (3000, 3000, 3000)
 ```
 """
-function loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Array{String,1}}
-    chromosomes::Array{String,1} = []
+function loci_alleles(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{String}}
+    chromosomes::Vector{String} = []
     positions::Vector{Int64} = []
-    alleles::Array{String,1} = []
+    alleles::Vector{String} = []
     for locus in genomes.loci_alleles
         # locus = genomes.loci_alleles[1]
-        locus_ids::Array{String,1} = split(locus, '\t')
+        locus_ids::Vector{String} = split(locus, '\t')
         push!(chromosomes, locus_ids[1])
         push!(positions, parse(Int64, locus_ids[2]))
         push!(alleles, locus_ids[4])
@@ -179,7 +179,7 @@ function loci_alleles(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Arr
 end
 
 """
-    loci(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Vector{Int64},Vector{Int64}}
+    loci(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{Int64},Vector{Int64}}
 
 Extract chromosome names, positions, start and end indexes of each locus across loci
 
@@ -193,8 +193,8 @@ julia> length(chromsomes), length(positions), length(loci_ini_idx), length(loci_
 (1000, 1000, 1000, 1000)
 ```
 """
-function loci(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Vector{Int64},Vector{Int64}}
-    chromosomes::Array{String,1} = []
+function loci(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{Int64},Vector{Int64}}
+    chromosomes::Vector{String} = []
     positions::Vector{Int64} = []
     loci_ini_idx::Vector{Int64} = []
     loci_fin_idx::Vector{Int64} = []
@@ -202,7 +202,7 @@ function loci(genomes::Genomes)::Tuple{Array{String,1},Vector{Int64},Vector{Int6
     for locus in genomes.loci_alleles
         # locus = genomes.loci_alleles[1]
         idx += 1
-        locus_ids::Array{String,1} = split(locus, '\t')
+        locus_ids::Vector{String} = split(locus, '\t')
         if length(chromosomes) == 0
             push!(chromosomes, locus_ids[1])
             push!(positions, parse(Int64, locus_ids[2]))

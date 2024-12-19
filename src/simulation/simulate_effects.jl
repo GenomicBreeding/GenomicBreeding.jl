@@ -33,7 +33,7 @@ SimulatedEffects()
 ```
 """
 mutable struct SimulatedEffects
-    id::Array{String,1}
+    id::Vector{String}
     year::Float64
     season::Float64
     site::Float64
