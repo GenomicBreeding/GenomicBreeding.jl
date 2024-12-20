@@ -21,6 +21,7 @@ using Metida
 # Plots.backend(:plotly)
 Plots.backend(:gr)
 
+include("core/abstract_types.jl")
 include("core/genomes.jl")
 include("core/phenomes.jl")
 include("core/trials.jl")
@@ -44,27 +45,38 @@ export simulategenomes
 export simulateeffects, simulategenomiceffects, simulatetrials
 export tabularise
 export countlevels, @string2formula, trialsmodelsfomulae!, analyse
-export writeJLD2, writedelimited
+export writeJLD2, writedelimited, readJLD2, readdelimited
 
 
 # Precompile
 @compile_workload begin
-    g = Genomes()
-    p = Phenomes()
-    t = Trials()
-    e = SimulatedEffects()
-    checkdims(g)
-    checkdims(p)
-    checkdims(t)
-    checkdims(e)
+    n = 10
+    genomes = simulategenomes(n = n)
+    trials, effects = simulatetrials(
+        genomes = genomes,
+        f_add_dom_epi = [
+            0.50 0.25 0.13
+            0.90 0.00 0.00
+        ],
+        n_years = 1,
+        n_seasons = 1,
+        n_harvests = 1,
+        n_sites = 1,
+        n_replications = 2,
+    )
+    phenomes = Phenomes(n = n, t = 2)
+    phenomes.entries = trials.entries[1:n]
+    phenomes.populations = trials.populations[1:n]
+    phenomes.traits = trials.traits
+    phenomes.phenotypes = trials.phenotypes[1:n, :]
+    phenomes.mask .= true
+    tebv = analyse(trials, max_levels = 10)
 
-    genomes = simulategenomes(; n = 2, l = 2, n_chroms = 1, verbose = false)
-    dimensions(genomes)
-    simulateeffects()
-    simulategenomiceffects(; genomes = genomes)
-    trials, vector_of_effects = simulatetrials(genomes = genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=10, verbose=false)
-    tebv = analyse(trials, max_levels=10, verbose=false);
-
+    readJLD2(Genomes, writeJLD2(genomes))
+    readJLD2(Phenomes, writeJLD2(phenomes))
+    readJLD2(Trials, writeJLD2(trials))
+    readJLD2(SimulatedEffects, writeJLD2(effects[1]))
+    readJLD2(TEBV, writeJLD2(tebv))
 end
 
 end

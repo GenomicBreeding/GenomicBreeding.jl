@@ -12,7 +12,12 @@ makedocs(;
         edit_link = "main",
         assets = String[],
     ),
-    pages = ["Home" => "index.md"],
+    # pages = ["Home" => "index.md"],
+    pages = [
+        "index.md",
+        "simulations.md",
+        "models.md",
+    ]
 )
 
 deploydocs(; repo = "github.com/jeffersonfparil/GenomicBreeding.jl", devbranch = "main")

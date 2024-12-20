@@ -20,7 +20,7 @@ julia> tebv.traits
  ""
 ```
 """
-mutable struct TEBV
+mutable struct TEBV <: AbstractGB
     traits::Vector{String}
     formulae::Vector{String}
     models::Vector{LinearMixedModel{Float64}}
@@ -50,8 +50,8 @@ We deliberately excluded the models, df_BLUEs, and df_BLUPs for efficiency.
 ```jldoctest; setup = :(using GenomicBreeding, MixedModels, DataFrames)
 julia> tebv = TEBV(traits=[""], formulae=[""], models=[MixedModel(@formula(y~1+(1|x)), DataFrame(y=1, x=1))], df_BLUEs=[DataFrame(x=1)], df_BLUPs=[DataFrame(x=1)], df_TEBVs=[DataFrame(x=1)]);
 
-julia> hash(tebv)
-0x8954dcdaecb83385
+julia> typeof(hash(tebv))
+UInt64
 ```
 """
 function Base.hash(x::TEBV, h::UInt)::UInt

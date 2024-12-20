@@ -12,7 +12,8 @@ Genomes(; n::Int64 = 1, p::Int64 = 2)
 ## Fields
 - `entries`: names of the `n` entries or samples
 - `populations`: name/s of the population/s each entries or samples belong to
-- `loci_alleles`: names of the `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles) including the chromsome or scaffold name, position, all alleles, and current allele separated by tabs
+- `loci_alleles`: names of the `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles) including the 
+chromsome or scaffold name, position, all alleles, and current allele separated by tabs ("\\t")
 - `allele_frequencies`: `n x p` matrix of allele frequencies between 0 and 1 which can have missing values
 - `mask`: `n x p` matrix of boolean mask for selective analyses and slicing
 
@@ -28,17 +29,17 @@ julia> genomes.entries = ["entry_1", "entry_2"];
 
 julia> genomes.populations = ["pop_1", "pop_1"];
 
-julia> genomes.loci_alleles = ["chr1_12345_A|T_A", "chr2_678910_C|D_D"];
+julia> genomes.loci_alleles = ["chr1\\t12345\\tA|T\\tA", "chr2\\t678910\\tC|D\\tD"];
 
 julia> genomes.allele_frequencies = [0.5 0.25; 0.9 missing];
 
 julia> genomes.mask = [true true; true false];
 
 julia> genomes
-Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1_12345_A|T_A", "chr2_678910_C|D_D"], Union{Missing, Float64}[0.5 0.25; 0.9 missing], Bool[1 1; 1 0])
+Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1\\t12345\\tA|T\\tA", "chr2\\t678910\\tC|D\\tD"], Union{Missing, Float64}[0.5 0.25; 0.9 missing], Bool[1 1; 1 0])
 ```
 """
-mutable struct Genomes
+mutable struct Genomes <: AbstractGB
     entries::Vector{String}
     populations::Vector{String}
     loci_alleles::Vector{String}
@@ -59,8 +60,8 @@ We deliberately excluded the allele_frequencies, and mask for efficiency.
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> genomes = Genomes(n=2, p=2);
 
-julia> hash(genomes)
-0x78cf76f7360d8887
+julia> typeof(hash(genomes))
+UInt64
 ```
 """
 function Base.hash(x::Genomes, h::UInt)::UInt
@@ -108,7 +109,7 @@ false
 
 julia> genomes.entries = ["entry_1", "entry_2"];
 
-julia> genomes.loci_alleles = ["locus_1", "locus_2", "locus_3", "locus_4"];
+julia> genomes.loci_alleles = ["chr1\\t1\\tA|T\\tA", "chr1\\t2\\tC|G\\tG", "chr2\\t3\\tA|T\\tA", "chr2\\t4\\tG|T\\tG"];
 
 julia> checkdims(genomes)
 true

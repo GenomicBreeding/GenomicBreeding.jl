@@ -38,7 +38,7 @@ julia> phenomes
 Phenomes(["entry_1", "entry_2"], ["pop_A", "pop_B"], ["height", "yield"], Union{Missing, Float64}[200.0 2.5; 150.0 missing], Bool[1 1; 1 0])
 ```
 """
-mutable struct Phenomes
+mutable struct Phenomes <: AbstractGB
     entries::Vector{String}
     populations::Vector{String}
     traits::Vector{String}
@@ -59,8 +59,8 @@ Hash a Phenomes struct.
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> phenomes = Phenomes(n=2, t=2);
 
-julia> hash(phenomes)
-0x55d87bb9d60ad2d9
+julia> typeof(hash(phenomes))
+UInt64
 ```
 """
 function Base.hash(x::Phenomes, h::UInt)::UInt

@@ -8,7 +8,6 @@
     + `f_additive`: proportion of the `l` loci with non-zero additive effects on the phenotype
     + `f_dominance`: proportion of the `l*f_additive` additive effects loci with additional dominance effects
     + `f_epistasis`: proportion of the `l*f_additive` additive effects loci with additional epistasis effects
-- `n_traits`: Number of traits (default = 3)
 - `n_years`: Number of years (default = 2)
 - `n_seasons`: Number of seasons (default = 4)
 - `n_harvests`: Number of harvests (default = 2)
@@ -80,7 +79,7 @@ function simulatetrials(;
     sparsity::Float64 = 0.0,
     seed::Int64 = 42,
     verbose::Bool = true,
-)::Tuple{Trials,Array{SimulatedEffects,1}}
+)::Tuple{Trials,Vector{SimulatedEffects}}
     # genomes::Genomes = simulategenomes(n=100, l=2_000, n_alleles=3, verbose=false); f_add_dom_epi::Matrix{Float64} = [0.01 0.25 0.10; 0.05 0.50 0.25; 0.10 0.25 0.00]; n_years::Int64 = 2; n_seasons::Int64 = 4; n_harvests::Int64 = 2; n_sites::Int64 = 4; n_replications::Int64 = 2; n_blocks::Union{Missing,Int64} = missing; n_rows::Union{Missing,Int64} = missing; n_cols::Union{Missing,Int64} = missing; proportion_of_variance::Union{Missing,Matrix{Float64}} = missing; sparsity::Float64 = 0.25; seed::Int64 = 42; verbose::Bool = false;
     # Argument checks
     n_traits, n, field_layout, rng, proportion_of_variance = begin

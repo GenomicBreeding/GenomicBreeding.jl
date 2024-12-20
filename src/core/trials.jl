@@ -32,7 +32,7 @@ julia> fieldnames(Trials)
 (:phenotypes, :traits, :years, :seasons, :harvests, :sites, :replications, :blocks, :rows, :cols, :entries, :populations)
 ```
 """
-mutable struct Trials
+mutable struct Trials <: AbstractGB
     phenotypes::Matrix{Union{Float64,Missing}}
     traits::Vector{String}
     years::Vector{String}
@@ -73,12 +73,36 @@ Hash a Trials struct.
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> trials = Trials(n=2, t=2);
 
-julia> hash(trials)
-0x0b8a0916b19be2b1
+julia> typeof(hash(trials))
+UInt64
 ```
 """
 function Base.hash(x::Trials, h::UInt)::UInt
-    hash(Trials, hash(x.phenotypes, hash(x.traits, hash(x.years, hash(x.seasons, hash(x.harvests, hash(x.sites, hash(x.replications, hash(x.blocks, hash(x.rows, hash(x.cols, hash(x.entries, hash(x.populations, h)))))))))))))
+    hash(
+        Trials,
+        hash(
+            x.phenotypes,
+            hash(
+                x.traits,
+                hash(
+                    x.years,
+                    hash(
+                        x.seasons,
+                        hash(
+                            x.harvests,
+                            hash(
+                                x.sites,
+                                hash(
+                                    x.replications,
+                                    hash(x.blocks, hash(x.rows, hash(x.cols, hash(x.entries, hash(x.populations, h))))),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 end
 
 

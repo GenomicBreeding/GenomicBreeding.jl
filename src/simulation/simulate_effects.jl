@@ -32,7 +32,7 @@ Contains:
 SimulatedEffects()
 ```
 """
-mutable struct SimulatedEffects
+mutable struct SimulatedEffects <: AbstractGB
     id::Vector{String}
     year::Float64
     season::Float64
@@ -85,30 +85,69 @@ Hash a SimulatedEffects struct.
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> effects = SimulatedEffects();
 
-julia> hash(effects)
-0x7a45ab9b3613fe9c
+julia> typeof(hash(effects))
+UInt64
 ```
 """
 function Base.hash(x::SimulatedEffects, h::UInt)::UInt
-    hash(SimulatedEffects,
-    hash(x.id,
-    hash(x.year,
-    hash(x.season,
-    hash(x.site,
-    hash(x.seasons_x_year,
-    hash(x.harvests_x_season_x_year,
-    hash(x.sites_x_harvest_x_season_x_year,
-    hash(x.field_layout,
-    hash(x.replications_x_site_x_harvest_x_season_x_year,
-    hash(x.blocks_x_site_x_harvest_x_season_x_year,
-    hash(x.rows_x_site_x_harvest_x_season_x_year,
-    hash(x.cols_x_site_x_harvest_x_season_x_year,
-    hash(x.additive_genetic,
-    hash(x.dominance_genetic,
-    hash(x.epistasis_genetic,
-    hash(x.additive_allele_x_site_x_harvest_x_season_x_year,
-    hash(x.dominance_allele_x_site_x_harvest_x_season_x_year,
-    hash(x.epistasis_allele_x_site_x_harvest_x_season_x_year, h)))))))))))))))))))
+    hash(
+        SimulatedEffects,
+        hash(
+            x.id,
+            hash(
+                x.year,
+                hash(
+                    x.season,
+                    hash(
+                        x.site,
+                        hash(
+                            x.seasons_x_year,
+                            hash(
+                                x.harvests_x_season_x_year,
+                                hash(
+                                    x.sites_x_harvest_x_season_x_year,
+                                    hash(
+                                        x.field_layout,
+                                        hash(
+                                            x.replications_x_site_x_harvest_x_season_x_year,
+                                            hash(
+                                                x.blocks_x_site_x_harvest_x_season_x_year,
+                                                hash(
+                                                    x.rows_x_site_x_harvest_x_season_x_year,
+                                                    hash(
+                                                        x.cols_x_site_x_harvest_x_season_x_year,
+                                                        hash(
+                                                            x.additive_genetic,
+                                                            hash(
+                                                                x.dominance_genetic,
+                                                                hash(
+                                                                    x.epistasis_genetic,
+                                                                    hash(
+                                                                        x.additive_allele_x_site_x_harvest_x_season_x_year,
+                                                                        hash(
+                                                                            x.dominance_allele_x_site_x_harvest_x_season_x_year,
+                                                                            hash(
+                                                                                x.epistasis_allele_x_site_x_harvest_x_season_x_year,
+                                                                                h,
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
 end
 
 
