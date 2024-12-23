@@ -1,56 +1,4 @@
 """
-# Genomes struct 
-
-Containes unique entries and loci_alleles where allele frequencies can have missing values
-
-## Constructor
-
-```julia
-Genomes(; n::Int64 = 1, p::Int64 = 2)
-```
-
-## Fields
-- `entries`: names of the `n` entries or samples
-- `populations`: name/s of the population/s each entries or samples belong to
-- `loci_alleles`: names of the `p` loci-alleles combinations (`p` = `l` loci x `a-1` alleles) including the 
-chromsome or scaffold name, position, all alleles, and current allele separated by tabs ("\\t")
-- `allele_frequencies`: `n x p` matrix of allele frequencies between 0 and 1 which can have missing values
-- `mask`: `n x p` matrix of boolean mask for selective analyses and slicing
-
-## Examples
-```jldoctest; setup = :(using GenomicBreeding)
-julia> genomes = Genomes(n=2, p=2)
-Genomes(["", ""], ["", ""], ["", ""], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
-
-julia> fieldnames(Genomes)
-(:entries, :populations, :loci_alleles, :allele_frequencies, :mask)
-
-julia> genomes.entries = ["entry_1", "entry_2"];
-
-julia> genomes.populations = ["pop_1", "pop_1"];
-
-julia> genomes.loci_alleles = ["chr1\\t12345\\tA|T\\tA", "chr2\\t678910\\tC|D\\tD"];
-
-julia> genomes.allele_frequencies = [0.5 0.25; 0.9 missing];
-
-julia> genomes.mask = [true true; true false];
-
-julia> genomes
-Genomes(["entry_1", "entry_2"], ["pop_1", "pop_1"], ["chr1\\t12345\\tA|T\\tA", "chr2\\t678910\\tC|D\\tD"], Union{Missing, Float64}[0.5 0.25; 0.9 missing], Bool[1 1; 1 0])
-```
-"""
-mutable struct Genomes <: AbstractGB
-    entries::Vector{String}
-    populations::Vector{String}
-    loci_alleles::Vector{String}
-    allele_frequencies::Matrix{Union{Float64,Missing}}
-    mask::Matrix{Bool}
-    function Genomes(; n::Int64 = 1, p::Int64 = 2)
-        return new(fill("", n), fill("", n), fill("", p), fill(missing, n, p), fill(false, n, p))
-    end
-end
-
-"""
     Base.hash(x::Genomes, h::UInt)::UInt
 
 Hash a Genomes struct using the entries, populations and loci_alleles.
@@ -155,6 +103,9 @@ Dict{String, Int64} with 6 entries:
 ```
 """
 function dimensions(genomes::Genomes)::Dict{String,Int64}
+    if !checkdims(genomes)
+        throw(ArgumentError("Genomes struct is corrupted."))
+    end
     n_entries::Int64 = length(unique(genomes.entries))
     n_populations::Int64 = length(unique(genomes.populations))
     n_loci_alleles::Int64 = length(genomes.loci_alleles)
@@ -211,6 +162,9 @@ julia> length(chromsomes), length(positions), length(alleles)
 ```
 """
 function loci_alleles(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{String}}
+    if !checkdims(genomes)
+        throw(ArgumentError("Genomes struct is corrupted."))
+    end
     chromosomes::Vector{String} = []
     positions::Vector{Int64} = []
     alleles::Vector{String} = []
@@ -240,6 +194,9 @@ julia> length(chromsomes), length(positions), length(loci_ini_idx), length(loci_
 ```
 """
 function loci(genomes::Genomes)::Tuple{Vector{String},Vector{Int64},Vector{Int64},Vector{Int64}}
+    if !checkdims(genomes)
+        throw(ArgumentError("Genomes struct is corrupted."))
+    end
     chromosomes::Vector{String} = []
     positions::Vector{Int64} = []
     loci_ini_idx::Vector{Int64} = []
@@ -288,6 +245,9 @@ function plot(genomes::Genomes, seed::Int64 = 42)
     #   (1) histogram of allele frequencies per entry,
     #   (2) histogram of mean allele frequencies per locus, and
     #   (3) correlation heatmap of allele frequencies.
+    if !checkdims(genomes)
+        throw(ArgumentError("Genomes struct is corrupted."))
+    end
     rng::TaskLocalRNG = Random.seed!(seed)
     for pop in unique(genomes.populations)
         # pop = genomes.populations[1]
@@ -331,7 +291,7 @@ end
 """
     slice(genomes::Genomes;idx_entries::Vector{Int64},idx_loci_alleles::Vector{Int64})::Genomes
 
-Count the number of entries, populations, loci, and maximum number of alleles per locus in the Genomes struct
+Slice a Genomes struct by specifing indixes of entries and loci-allele combinations
 
 # Examples
 ```jldoctest; setup = :(using GenomicBreeding)
@@ -351,6 +311,9 @@ Dict{String, Int64} with 6 entries:
 """
 function slice(genomes::Genomes; idx_entries::Vector{Int64}, idx_loci_alleles::Vector{Int64})::Genomes
     # genomes::Genomes = simulategenomes(); idx_entries::Vector{Int64}=sample(1:100, 10); idx_loci_alleles::Vector{Int64}=sample(1:10_000, 1000);
+    if !checkdims(genomes)
+        throw(ArgumentError("Genomes struct is corrupted."))
+    end
     genomes_dims::Dict{String,Int64} = dimensions(genomes)
     n_entries::Int64 = genomes_dims["n_entries"]
     n_loci_alleles::Int64 = genomes_dims["n_loci_alleles"]
@@ -365,7 +328,7 @@ function slice(genomes::Genomes; idx_entries::Vector{Int64}, idx_loci_alleles::V
     unique!(idx_entries)
     unique!(idx_loci_alleles)
     n, p = length(idx_entries), length(idx_loci_alleles)
-    sliced_genomes::Genomes = Genomes(; n = n, p = p)
+    sliced_genomes::Genomes = Genomes(n = n, p = p)
     for (i1, i2) in enumerate(idx_entries)
         sliced_genomes.entries[i1] = genomes.entries[i2]
         sliced_genomes.populations[i1] = genomes.populations[i2]
@@ -385,29 +348,402 @@ function slice(genomes::Genomes; idx_entries::Vector{Int64}, idx_loci_alleles::V
     return sliced_genomes
 end
 
+
+"""
+    filter(
+        genomes::Genomes;
+        maf::Float64,
+        max_entry_sparsity::Float64 = 0.0,
+        max_locus_sparsity::Float64 = 0.0,
+        chr_pos_allele_ids::Union{Missing,Vector{String}} = missing,
+    )::Genomes
+
+Filter a Genomes struct by minimum allele frequency
+
+# Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes = simulategenomes(n=100, l=1_000, n_alleles=4, verbose=false);
+
+julia> filtered_genomes_1 = filter(genomes, maf=0.1);
+
+julia> filtered_genomes_2 = filter(genomes, maf=0.1, chr_pos_allele_ids=genomes.loci_alleles[1:1000]);
+
+julia> size(genomes.allele_frequencies)
+(100, 3000)
+
+julia> size(filtered_genomes_1.allele_frequencies)
+(100, 1236)
+
+julia> size(filtered_genomes_2.allele_frequencies)
+(100, 388)
+```
+"""
+function Base.filter(
+    genomes::Genomes;
+    maf::Float64,
+    max_entry_sparsity::Float64 = 0.0,
+    max_locus_sparsity::Float64 = 0.0,
+    chr_pos_allele_ids::Union{Missing,Vector{String}} = missing,
+)::Genomes
+    # genomes::Genomes = simulategenomes(sparsity=0.01, seed=123456); maf=0.01; max_entry_sparsity=0.1; max_locus_sparsity = 0.25
+    # chr_pos_allele_ids = sample(genomes.loci_alleles, Int(floor(0.5*length(genomes.loci_alleles)))); sort!(chr_pos_allele_ids)
+    if !checkdims(genomes)
+        throw(ArgumentError("Both Genomes structs are corrupted."))
+    end
+    if (maf < 0.0) || (maf > 1.0)
+        throw(ArgumentError("We accept `maf` from 0.0 to 1.0."))
+    end
+    # Filter by entry sparisy, locus sparsity and minimum allele frequency thresholds
+    entry_sparsities::Array{Float64,1} = fill(0.0, length(genomes.entries))
+    mean_frequencies::Array{Float64,1} = fill(0.0, length(genomes.loci_alleles))
+    locus_sparsities::Array{Float64,1} = fill(0.0, length(genomes.loci_alleles))
+    for i in eachindex(entry_sparsities)
+        entry_sparsities[i] = mean(Float64.(ismissing.(genomes.allele_frequencies[i, :])))
+    end
+    for j in eachindex(mean_frequencies)
+        mean_frequencies[j] = mean(skipmissing(genomes.allele_frequencies[:, j]))
+        locus_sparsities[j] = mean(Float64.(ismissing.(genomes.allele_frequencies[:, j])))
+    end
+    idx_entries::Array{Int64,1} = findall((entry_sparsities .<= max_entry_sparsity))
+    idx_loci_alleles::Array{Int64,1} = findall(
+        (mean_frequencies .>= maf) .&& (mean_frequencies .<= (1.0 - maf)) .&& (locus_sparsities .<= max_locus_sparsity),
+    )
+    # Check if we are retaining any entries and loci
+    if (length(idx_entries) == 0) && (length(idx_loci_alleles) == 0)
+        throw(
+            ErrorException(
+                string(
+                    "All entries and loci filtered out at maximum entry sparsity = ",
+                    max_entry_sparsity,
+                    ", minimum allele frequencies (maf) = ",
+                    maf,
+                    ", and maximum locus sparsity = ",
+                    max_locus_sparsity,
+                    ".",
+                ),
+            ),
+        )
+    end
+    if length(idx_entries) == 0
+        throw(ErrorException(string("All entries filtered out at maximum entry sparsity = ", max_entry_sparsity, ".")))
+    end
+    if length(idx_loci_alleles) == 0
+        throw(
+            ErrorException(
+                string(
+                    "All loci filtered out at minimum allele frequencies (maf) = ",
+                    maf,
+                    ", and maximum locus sparsity = ",
+                    max_locus_sparsity,
+                    ".",
+                ),
+            ),
+        )
+    end
+    # Are we filtering using a list of loci-allele combination names?
+    if !ismissing(chr_pos_allele_ids) && (length(chr_pos_allele_ids) > 0)
+        requested_chr, requested_pos, requested_all = begin
+            chr::Vector{String} = fill("", length(chr_pos_allele_ids))
+            pos::Vector{Int64} = fill(0, length(chr_pos_allele_ids))
+            ale::Vector{String} = fill("", length(chr_pos_allele_ids))
+            ids::Vector{String} = []
+            for i in eachindex(chr_pos_allele_ids)
+                ids = split(chr_pos_allele_ids[i], "\t")
+                if length(ids) < 3
+                    throw(ArgumentError(string("We expect the first two elements of each item in `chr_pos_allele_ids` to be the chromosome name, and position, while the last element is the allele id which are all delimited by tabs. See the element ", i, ": ",  chr_pos_allele_ids[i])))
+                end
+                chr[i] = ids[1]
+                pos[i] = try
+                    parse(Int64, ids[2])
+                catch
+                    throw(ArgumentError(string("We expect the second element of each item in `chr_pos_allele_ids` to be the position (Int64). See the element ", i, ": ",  chr_pos_allele_ids[i])))
+                end
+                ale[i] = ids[end]
+            end
+            chr, pos, ale
+        end
+        chromosomes, positions, alleles = loci_alleles(genomes)
+        idx_loci_alleles = filter(i -> (sum((chromosomes[i] .== requested_chr) .&& (positions[i] .== requested_pos) .&& (alleles[i] .== requested_all))> 0), idx_loci_alleles)
+        if length(idx_loci_alleles) == 0
+            throw(
+                ErrorException(
+                    string(
+                        "No loci retained after filtering using a list of loci-alleles combination names `loci_alleles::Union{Missing,Vector{String}}`",
+                        " in addition to filtering by maf = ",
+                        maf,
+                        ", and maximum locus sparsity = ",
+                        max_locus_sparsity,
+                        ".",
+                    ),
+                ),
+            )
+        end
+    end
+    # Output
+    filtered_genomes::Genomes = slice(genomes, idx_entries = idx_entries; idx_loci_alleles = idx_loci_alleles)
+    filtered_genomes
+end
+
+
+"""
+    merge(
+        genomes::Genomes,
+        other::Genomes;
+        conflict_resolution::Tuple{Float64,Float64} = (0.5, 0.5),
+        verbose::Bool = true,
+    )::Genomes
+
+Merge two Genomes structs using a tuple of conflict resolution weights
+
+# Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> n = 100; l = 5_000; n_alleles = 2;
+
+julia> all = simulategenomes(n=n, l=l, n_alleles=n_alleles, verbose=false);
+
+julia> genomes = slice(all, idx_entries=collect(1:Int(floor(n*0.75))), idx_loci_alleles=collect(1:Int(floor(l*(n_alleles-1)*0.75))));
+
+julia> other = slice(all, idx_entries=collect(Int(floor(n*0.50)):n), idx_loci_alleles=collect(Int(floor(l*(n_alleles-1)*0.50)):l*(n_alleles-1)));
+
+julia> merged_genomes = merge(genomes, other, conflict_resolution=(0.75, 0.25), verbose=false);
+
+julia> size(merged_genomes.allele_frequencies)
+(100, 5000)
+
+julia> sum(ismissing.(merged_genomes.allele_frequencies))
+123725
+```
+"""
+function Base.merge(
+    genomes::Genomes,
+    other::Genomes;
+    conflict_resolution::Tuple{Float64,Float64} = (0.5, 0.5),
+    verbose::Bool = true,
+)::Genomes
+    # n = 100; l = 5_000; n_alleles = 2;
+    # all = simulategenomes(n=n, l=l, n_alleles=n_alleles, sparsity=0.05, seed=123456);
+    # genomes = slice(all, idx_entries=collect(1:Int(floor(n*0.75))), idx_loci_alleles=collect(1:Int(floor(l*(n_alleles-1)*0.75))));
+    # other = slice(all, idx_entries=collect(Int(floor(n*0.50)):n), idx_loci_alleles=collect(Int(floor(l*(n_alleles-1)*0.50)):l*(n_alleles-1)));
+    # conflict_resolution::Tuple{Float64,Float64} = (0.5,0.5); verbose::Bool = true
+    # Check arguments
+    if !checkdims(genomes) && !checkdims(other)
+        throw(ArgumentError("Both Genomes structs are corrupted."))
+    end
+    if !checkdims(genomes)
+        throw(ArgumentError("The first Genomes struct is corrupted."))
+    end
+    if !checkdims(other)
+        throw(ArgumentError("The second Genomes struct is corrupted."))
+    end
+    if (length(conflict_resolution) != 2) && (sum(conflict_resolution) != 1.00)
+        throw(ArgumentError("We expect `conflict_resolution` 2 be a 2-item tuple which sums up to exactly 1.00."))
+    end
+    # Instantiate the merged Genomes struct
+    entries::Vector{String} = genomes.entries ∪ other.entries
+    populations::Vector{String} = fill("", length(entries))
+    loci_alleles::Vector{String} = genomes.loci_alleles ∪ other.loci_alleles
+    allele_frequencies::Matrix{Union{Missing,Float64}} = fill(missing, (length(entries), length(loci_alleles)))
+    mask::Matrix{Bool} = fill(false, (length(entries), length(loci_alleles)))
+    out::Genomes = Genomes(n = length(entries), p = length(loci_alleles))
+    # Merge and resolve conflicts in allele frequencies and mask
+    if verbose
+        pb = ProgressMeter.Progress(length(entries) * length(loci_alleles); desc = "Merging 2 Genomes structs: ")
+    end
+    idx_entry_1::Vector{Int} = []
+    idx_entry_2::Vector{Int} = []
+    bool_entry_1::Bool = false
+    bool_entry_2::Bool = false
+    idx_locus_allele_1::Vector{Int} = []
+    idx_locus_allele_2::Vector{Int} = []
+    bool_locus_allele_1::Bool = false
+    bool_locus_allele_2::Bool = false
+    for (i, entry) in enumerate(entries)
+        # entry = entries[i]
+        idx_entry_1 = findall(genomes.entries .== entry)
+        idx_entry_2 = findall(other.entries .== entry)
+        # We expect a maximum of 1 match per entry as we checked the Genomes structs
+        bool_entry_1 = length(idx_entry_1) > 0
+        bool_entry_2 = length(idx_entry_2) > 0
+        if bool_entry_1 && bool_entry_2
+            if genomes.populations[idx_entry_1[1]] == other.populations[idx_entry_2[1]]
+                populations[i] = genomes.populations[idx_entry_1[1]]
+            else
+                populations[i] = string(
+                    "CONFLICT (",
+                    genomes.populations[idx_entry_1[1]]...,
+                    ", ",
+                    other.populations[idx_entry_2[1]]...,
+                    ")",
+                )
+            end
+        elseif bool_entry_1
+            populations[i] = genomes.populations[idx_entry_1[1]]
+        elseif bool_entry_2
+            populations[i] = other.populations[idx_entry_2[1]]
+        else
+            continue # should never happen
+        end
+        for (j, locus_allele) in enumerate(loci_alleles)
+            # locus_allele = loci_alleles[j]
+            # We expect 1 locus-allele match as we checked the Genomes structs
+            idx_locus_allele_1 = findall(genomes.loci_alleles .== locus_allele)
+            idx_locus_allele_2 = findall(other.loci_alleles .== locus_allele)
+            bool_locus_allele_1 = length(idx_locus_allele_1) > 0
+            bool_locus_allele_2 = length(idx_locus_allele_2) > 0
+            if bool_entry_1 && bool_locus_allele_1 && bool_entry_2 && bool_locus_allele_2
+                q_1 = genomes.allele_frequencies[idx_entry_1[1], idx_locus_allele_1[1]]
+                q_2 = other.allele_frequencies[idx_entry_2[1], idx_locus_allele_2[1]]
+                m_1 = genomes.mask[idx_entry_1[1], idx_locus_allele_1[1]]
+                m_2 = other.mask[idx_entry_2[1], idx_locus_allele_2[1]]
+                if skipmissing(q_1) == skipmissing(q_2)
+                    allele_frequencies[i, j] = q_1
+                    mask[i, j] = m_1
+                else
+                    if !ismissing(q_1) && !ismissing(q_2)
+                        allele_frequencies[i, j] = sum((q_1, q_2) .* conflict_resolution)
+                    elseif !ismissing(q_1)
+                        allele_frequencies[i, j] = q_1
+                    else
+                        allele_frequencies[i, j] = q_2
+                    end
+                    mask[i, j] = Bool(round(sum((m_1, m_2) .* conflict_resolution)))
+                end
+            elseif bool_entry_1 && bool_locus_allele_1
+                allele_frequencies[i, j] = genomes.allele_frequencies[idx_entry_1[1], idx_locus_allele_1[1]]
+                mask[i, j] = genomes.mask[idx_entry_1[1], idx_locus_allele_1[1]]
+            elseif bool_entry_2 && bool_locus_allele_2
+                allele_frequencies[i, j] = other.allele_frequencies[idx_entry_2[1], idx_locus_allele_2[1]]
+                mask[i, j] = other.mask[idx_entry_2[1], idx_locus_allele_2[1]]
+            else
+                continue
+            end
+            if verbose
+                next!(pb)
+            end
+        end
+    end
+    if verbose
+        finish!(pb)
+    end
+    # Output
+    out.entries = entries
+    out.populations = populations
+    out.loci_alleles = loci_alleles
+    out.allele_frequencies = allele_frequencies
+    out.mask = mask
+    if !checkdims(out)
+        throw(ErrorException("Error merging the 2 Genomes structs."))
+    end
+    out
+end
+
+
+"""
+    merge(genomes::Genomes, phenomes::Phenomes; keep_all::Bool=true)::Tuple{Genomes,Phenomes}
+
+Merge a Genomes struct with a Phenomes struct using union or intersection
+
+# Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes = simulategenomes(n=10, verbose=false);
+
+julia> trials, effects = simulatetrials(genomes=slice(genomes, idx_entries=collect(1:5), idx_loci_alleles=collect(1:length(genomes.loci_alleles))), f_add_dom_epi=[0.90 0.05 0.05;], n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=2, verbose=false);
+
+julia> phenomes = analyse(trials, max_levels=20, max_time_per_model=10, verbose=false).phenomes[1];
+
+julia> genomes_merged_1, phenomes_merged_1 = merge(genomes, phenomes, keep_all=true);
+
+julia> size(genomes_merged_1.allele_frequencies), size(phenomes_merged_1.phenotypes)
+((10, 10000), (10, 1))
+
+julia> genomes_merged_2, phenomes_merged_2 = merge(genomes, phenomes, keep_all=false);
+
+julia> size(genomes_merged_2.allele_frequencies), size(phenomes_merged_2.phenotypes)
+((5, 10000), (5, 1))
+```
+"""
+function Base.merge(genomes::Genomes, phenomes::Phenomes; keep_all::Bool = true)::Tuple{Genomes,Phenomes}
+    # genomes = simulategenomes(n=10, verbose=false);
+    # trials, effects = simulatetrials(genomes=slice(genomes, idx_entries=collect(1:5), idx_loci_alleles=collect(1:length(genomes.loci_alleles))), f_add_dom_epi=[0.90 0.05 0.05;], n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=2, verbose=false);
+    # phenomes = analyse(trials, max_levels=20, max_time_per_model=10, verbose=false).phenomes[1]; keep_all::Bool = false
+    # Check input arguments
+    if !checkdims(genomes) && !checkdims(phenomes)
+        throw(ArgumentError("The Genomes and Phenomes structs are corrupted."))
+    end
+    if !checkdims(genomes)
+        throw(ArgumentError("The Genomes struct is corrupted."))
+    end
+    if !checkdims(phenomes)
+        throw(ArgumentError("The Phenomes struct is corrupted."))
+    end
+    # Identify the entries to be included
+    entries::Vector{String} = []
+    if keep_all
+        entries = genomes.entries ∪ phenomes.entries
+    else
+        entries = genomes.entries ∩ phenomes.entries
+    end
+    # Instantiate the output structs
+    out_genomes::Genomes = Genomes(n = length(entries), p = length(genomes.loci_alleles))
+    out_phenomes::Phenomes = Phenomes(n = length(entries), t = length(phenomes.traits))
+    # Populate the loci, and trait information
+    out_genomes.loci_alleles = genomes.loci_alleles
+    out_phenomes.traits = phenomes.traits
+    # Iterate across entries which guarantees the order of entries in both out_genomes and out_phenomes is the same
+    for (i, entry) in enumerate(entries)
+        out_genomes.entries[i] = entry
+        out_phenomes.entries[i] = entry
+        idx_1 = findall(genomes.entries .== entry)
+        idx_2 = findall(phenomes.entries .== entry)
+        # We expect a maximum of 1 match per entry as we checked the Genomes structs
+        bool_1 = length(idx_1) > 0
+        bool_2 = length(idx_2) > 0
+        if bool_1 && bool_2
+            if genomes.populations[idx_1[1]] == phenomes.populations[idx_2[1]]
+                out_genomes.populations[i] = out_phenomes.populations[i] = genomes.populations[idx_1[1]]
+            else
+                out_genomes.populations[i] =
+                    out_phenomes.populations[i] = string(
+                        "CONFLICT (",
+                        genomes.populations[idx_1[1]]...,
+                        ", ",
+                        phenomes.populations[idx_2[1]]...,
+                        ")",
+                    )
+            end
+            out_genomes.allele_frequencies[i, :] = genomes.allele_frequencies[idx_1, :]
+            out_genomes.mask[i, :] = genomes.mask[idx_1, :]
+            out_phenomes.phenotypes[i, :] = phenomes.phenotypes[idx_2, :]
+            out_phenomes.mask[i, :] = phenomes.mask[idx_2, :]
+        elseif bool_1
+            out_genomes.populations[i] = out_phenomes.populations[i] = genomes.populations[idx_1[1]]
+            out_genomes.allele_frequencies[i, :] = genomes.allele_frequencies[idx_1, :]
+            out_genomes.mask[i, :] = genomes.mask[idx_1, :]
+        elseif bool_2
+            out_genomes.populations[i] = out_phenomes.populations[i] = phenomes.populations[idx_2[1]]
+            out_phenomes.phenotypes[i, :] = phenomes.phenotypes[idx_2, :]
+            out_phenomes.mask[i, :] = phenomes.mask[idx_2, :]
+        else
+            continue # should never happen
+        end
+    end
+    # Outputs
+    if !checkdims(out_genomes) || !checkdims(out_phenomes)
+        throw(ErrorException("Error merging Genomes and Phenomes structs"))
+    end
+    out_genomes, out_phenomes
+end
+
+
+
+
 # """
-#     filter(genomes::Genomes; maf::Float64)::Genomes
-
-# Filter Genomes struct by minimum allele frequency
-
-# # Examples
-# ```jldoctest; setup = :(using GenomicBreeding)
-# julia> genomes = simulategenomes(n=100, l=1_000, n_alleles=4, verbose=false);
-
-# ```
+# TODO: slice using mask
 # """
-# function filter(genomes::Genomes; maf::Float64)::Genomes
-#     # genomes::Genomes = simulategenomes(sparsity=0.01, seed=123456); maf=0.01;
-#     if (maf < 0.0) || (maf > 1.0)
-#         throw(ArgumentError("We accept `maf` from 0.0 to 1.0."))
-#     end
-#     q::Array{Float64, 1} = fill(0.0, length(genomes.loci_alleles))
-#     for j in eachindex(q)
-#         q[j] = mean(skipmissing(genomes.allele_frequencies[:, j]))
-#     end
-#     idx::Array{Int64, 1} = findall((q .>= maf) .&& (q .<= (1.0-maf)))
-#     filtered_genomes::Genomes = slice(genomes, idx_entries=collect(1:length(genomes.entries)); idx_loci_alleles=idx);
+# function slice(genomes::Genomes)::Genomes end
 
-#     # Output
-#     filtered_genomes
-# end
+
+# """
+# TODO: filter using mask
+# """
+# function filter(genomes::Genomes)::Genomes end

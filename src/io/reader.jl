@@ -93,11 +93,27 @@ function readdelimited(type::Type{Genomes}; fname::String, sep::String = "\t")::
     genomes.entries = header_1[5:end]
     genomes.populations = header_2[5:end]
     genomes.mask .= true
+    # Check for duplicate entries
+    unique_entries::Vector{String} = unique(genomes.entries)
+    duplicated_entries::Vector{String} = []
+    for entry in unique_entries
+        if sum(genomes.entries .== entry) > 1
+            push!(duplicated_entries, entry)
+        end
+    end
+    if length(genomes.entries) > length(unique_entries)
+        throw(
+            ErrorException(
+                string("Duplicate entries in file: '", fname, "' i.e.:\n\t‣ ", join(duplicated_entries, "\n\t‣ ")),
+            ),
+        )
+    end
     # Read the file line by line
     line_counter::Int64 = 0
     i::Int64 = 0
     file = open(fname, "r")
     for raw_line in eachline(file)
+        # println(string("i=", i, "; line_counter=", line_counter))
         line = split(raw_line, sep)
         line_counter += 1
         # Skip commented out lines including the forst 2 header
@@ -151,10 +167,35 @@ function readdelimited(type::Type{Genomes}; fname::String, sep::String = "\t")::
         end
     end
     close(file)
-    # Check
+    # Checks
+    unique_loci_alleles::Vector{String} = unique(genomes.loci_alleles)
+    duplicated_loci_alleles::Vector{String} = []
+    for locus_allele in unique_loci_alleles
+        if sum(genomes.loci_alleles .== locus_allele) > 1
+            push!(duplicated_loci_alleles, locus_allele)
+        end
+    end
+    if length(genomes.loci_alleles) > length(unique_loci_alleles)
+        throw(
+            ErrorException(
+                string(
+                    "Duplicate loci-allele combinations in file: '",
+                    fname,
+                    "' at:\n\t‣ ",
+                    join(duplicated_loci_alleles, "\n\t‣ "),
+                ),
+            ),
+        )
+    end
     if !checkdims(genomes)
         throw(ErrorException("Error loading Genomes struct from the file: '" * fname * "'"))
     end
     # Output
     genomes
 end
+
+function readdelimited(type::Type{Phenomes}; fname::String, sep::String = "\t")::Phenomes end
+
+function readdelimited(type::Type{Trials}; fname::String, sep::String = "\t")::Trials end
+
+function readvcf(fname::String)::Genomes end

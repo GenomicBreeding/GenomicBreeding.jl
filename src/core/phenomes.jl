@@ -1,56 +1,4 @@
 """
-# Phenomes struct
-
-Constains unique entries and traits where phenotype data can have missing values
-
-## Constructor
-
-```julia
-Phenomes(; n::Int64 = 1, t::Int64 = 2)
-```
-
-## Fields
-- `entries`: names of the `n` entries or samples
-- `populations`: name/s of the population/s each entries or samples belong to
-- `traits`: names of the `t` traits
-- `phenotypes`: `n x t` matrix of numeric (`R`) phenotype data which can have missing values
-- `mask`: `n x t` matrix of boolean mask for selective analyses and slicing
-
-## Examples
-```jldoctest; setup = :(using GenomicBreeding)
-julia> phenomes = Phenomes(n=2, t=2)
-Phenomes(["", ""], ["", ""], ["", ""], Union{Missing, Float64}[missing missing; missing missing], Bool[0 0; 0 0])
-
-julia> fieldnames(Phenomes)
-(:entries, :populations, :traits, :phenotypes, :mask)
-
-julia> phenomes.entries = ["entry_1", "entry_2"];
-
-julia> phenomes.populations = ["pop_A", "pop_B"];
-
-julia> phenomes.traits = ["height", "yield"];
-
-julia> phenomes.phenotypes = [200.0 2.5; 150.0 missing];
-
-julia> phenomes.mask = [true true; true false];
-
-julia> phenomes
-Phenomes(["entry_1", "entry_2"], ["pop_A", "pop_B"], ["height", "yield"], Union{Missing, Float64}[200.0 2.5; 150.0 missing], Bool[1 1; 1 0])
-```
-"""
-mutable struct Phenomes <: AbstractGB
-    entries::Vector{String}
-    populations::Vector{String}
-    traits::Vector{String}
-    phenotypes::Matrix{Union{Float64,Missing}}
-    mask::Matrix{Bool}
-    function Phenomes(; n::Int64 = 1, t::Int64 = 2)
-        return new(fill("", n), fill("", n), fill("", t), fill(missing, n, t), fill(false, n, t))
-    end
-end
-
-
-"""
     Base.hash(x::Phenomes, h::UInt)::UInt
 
 Hash a Phenomes struct.
@@ -132,3 +80,14 @@ function checkdims(y::Phenomes)::Bool
     end
     return true
 end
+
+
+# """
+# TODO: filter using mask
+# """
+# function filter(phenomes::Phenomes)::Phenomes end
+
+# """
+# TODO: merge 2 Phenomes structs
+# """
+# function merge(phenomes::Phenomes, other::Phenomes)::Phenomes end

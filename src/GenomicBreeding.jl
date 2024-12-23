@@ -21,7 +21,7 @@ using Metida
 # Plots.backend(:plotly)
 Plots.backend(:gr)
 
-include("core/abstract_types.jl")
+include("core/all_structs.jl")
 include("core/genomes.jl")
 include("core/phenomes.jl")
 include("core/trials.jl")
@@ -37,10 +37,8 @@ include("models/ols.jl")
 include("io/reader.jl")
 include("io/writer.jl")
 
-# include("precompile.jl")
-
 export Genomes, Phenomes, Trials, SimulatedEffects, TEBV
-export hash, ==, checkdims, dimensions, loci_alleles, loci, plot, slice
+export hash, ==, checkdims, dimensions, loci_alleles, loci, plot, slice, filter
 export simulategenomes
 export simulateeffects, simulategenomiceffects, simulatetrials
 export tabularise

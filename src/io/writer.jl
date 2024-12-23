@@ -324,3 +324,5 @@ function writedelimited(trials::Trials; fname::Union{Missing,String} = missing, 
     end
     return fname
 end
+
+function writevcf(genomes::Genomes)::String end
