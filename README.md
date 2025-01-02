@@ -1,8 +1,8 @@
 # GenomicBreeding
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://jeffersonfparil.github.io/GenomicBreeding.jl/)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://jeffersonfparil.github.io/GenomicBreeding.jl/dev/)
-[![Build Status](https://github.com/jeffersonfparil/GenomicBreeding.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/jeffersonfparil/GenomicBreeding.jl/actions)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://GenomicBreeding.github.io/GenomicBreeding.jl/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://GenomicBreeding.github.io/GenomicBreeding.jl/dev/)
+[![Build Status](https://github.com/GenomicBreeding/GenomicBreeding.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/GenomicBreeding/GenomicBreeding.jl/actions)
 
 ## Dev stuff:
 
@@ -28,9 +28,9 @@ time julia test/cli_tester.jl
 ```julia
 using PkgTemplates
 t = Template(;
-    user="jeffersonfparil",
+    user="GenomicBreeding",
     authors=["jeffersonparil@gmail.com"],
-    dir="./SimQuantGen.jl",
+    dir="./",
     julia=v"1.11",
     plugins=[
         License(; name="GPL-3.0+", path=nothing, destination="LICENSE.md"),
@@ -41,18 +41,26 @@ t = Template(;
         ),
         Documenter{GitHubActions}(),
         Git(;
-            ignore=["*.jl.*.cov",
-                    "*.jl.cov",
-                    "*.jl.mem",
-                    "*.code-workspace",
-                    ".DS_Store",
-                    "docs/build/",
-                    "Manifest.toml",
-                    "tmp/",
-                    "*.svg"],
+            ignore=[
+                "*.code-workspace",
+                "*.jl.*.cov",
+                "*.jl.cov",
+                "*.jl.mem",
+                ".DS_Store",
+                "/docs/Manifest.toml",
+                "/docs/build/",
+                "Manifest.toml",
+                "docs/build/",
+                "tmp/",
+                "*.svg",
+                "*.jld2",
+                "*.tsv",
+                "*.csv",
+                "*.txt"
+            ],
             ssh=true
         ),
     ],
 )
-t("SimQuantGen.jl")
+t("GBIO.jl")
 ```
