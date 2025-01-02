@@ -4,7 +4,7 @@ CurrentModule = GenomicBreeding
 
 # GenomicBreeding
 
-Documentation for [GenomicBreeding](https://github.com/jeffersonfparil/GenomicBreeding.jl).
+Documentation for [GenomicBreeding](https://github.com/GenomicBreeding/GenomicBreeding.jl).
 
 ```@index
 ```
