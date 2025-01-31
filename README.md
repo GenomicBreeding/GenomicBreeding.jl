@@ -15,7 +15,6 @@ julia --threads 8,1 --load test/prelude.jl
 ### Format and test
 
 ```shell
-git submodule update
 time julia test/cli_tester.jl
 ```
 
