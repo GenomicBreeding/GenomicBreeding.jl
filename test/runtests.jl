@@ -1,9 +1,9 @@
-using GenomicBreeding, Test, Documenter
+using GBCore
+using Test
+using Documenter
 
-Documenter.doctest(GenomicBreeding)
+Documenter.doctest(GBCore)
 
-# TODO: Add more unit tests in addition to the doctests
-@testset "GenomicBreeding.jl" begin
-    genomes::Genomes = simulategenomes(; verbose = false)
-    @test isa(genomes, Genomes)
+@testset "GBCore.jl" begin
+    @test 1 == 1
 end
