@@ -4,6 +4,7 @@ authors = ["jeffersonparil@gmail.com"]
 version = "1.0.0-DEV"
 
 [deps]
+<<<<<<< HEAD
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GBCore = "50d95318-1838-4cfa-a614-3543b4bb0509"
 GBIO = "f6f5bf5f-7369-4de1-9a2f-51e3ce5e0754"
@@ -21,6 +22,12 @@ GBPlots = {rev = "main", url = "https://github.com/GenomicBreeding/GBPlots.jl"}
 DataFrames = "1.7.0"
 GBCore = "1.0.0"
 StatsBase = "0.34.4"
+=======
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[compat]
+Documenter = "1.8.0"
+>>>>>>> 7b2d10d3735c6d1b76158a74a72edb4cdd8f5b60
 julia = "1.11"
 
 [extras]
