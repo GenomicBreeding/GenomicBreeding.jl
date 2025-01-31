@@ -1,9 +1,9 @@
-using GenomicBreeding
+using GBCore
 using Test
 using Documenter
 
-Documenter.doctest(GenomicBreeding)
+Documenter.doctest(GBCore)
 
-@testset "GenomicBreeding.jl" begin
+@testset "GBCore.jl" begin
     @test 1 == 1
 end
