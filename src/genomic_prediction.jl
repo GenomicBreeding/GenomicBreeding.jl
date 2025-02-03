@@ -1,4 +1,4 @@
-function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
+function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
     # genomes = GBCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -14,30 +14,63 @@ function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
     models = input.models
     n_folds = input.n_folds
     n_replications = input.n_replications
+    # keep_all = input.keep_all
     # maf = input.maf
     # mtv = input.mtv
     verbose = input.verbose
-    # Load gneomes and phenomes
+    # Load genomes and phenomes
     genomes, phenomes = load(input)
     dim_genomes = dimensions(genomes)
     dim_phenomes = dimensions(phenomes)
-    # Bulk CV
-    cvs_bulk, notes_bulk = if bulk_cv
-        cvbulk(genomes=genomes, phenomes=phenomes, models=models, n_replications=n_replications, n_folds=n_folds, verbose=verbose)
+    # Bulk CV or if there is only one population
+    cvs_bulk, notes_bulk = if bulk_cv || (dim_genomes["n_populations"] == 1)
+        cvbulk(
+            genomes = genomes,
+            phenomes = phenomes,
+            models = models,
+            n_replications = n_replications,
+            n_folds = n_folds,
+            verbose = verbose,
+        )
     else
         nothing, nothing
     end
-    # Per population CV
-    cvs_perpop, notes_perpop = cvperpopulation(genomes=genomes, phenomes=phenomes, models=models, n_replications=n_replications, n_folds=n_folds, verbose=verbose)
-    # Pairwise population CV
-    cvs_pairwise, notes_pairwise = if dim_genomes["n_populations"] > 1
-        cvpairwisepopulation(genomes=genomes, phenomes=phenomes, models=models, n_replications=n_replications, n_folds=n_folds, verbose=verbose)
+    # Per population CV, i.e. if not builk CV (across all populations) and there are more than 1 population
+    cvs_perpop, notes_perpop = if !bulk_cv && (dim_genomes["n_populations"] > 1)
+        cvperpopulation(
+            genomes = genomes,
+            phenomes = phenomes,
+            models = models,
+            n_replications = n_replications,
+            n_folds = n_folds,
+            verbose = verbose,
+        )
+    else
+        (nothing, nothing)
+    end
+    # Pairwise population CV, i.e. if not builk CV (across all populations) and there are more than 1 population
+    cvs_pairwise, notes_pairwise = if !bulk_cv && (dim_genomes["n_populations"] > 1)
+        cvpairwisepopulation(
+            genomes = genomes,
+            phenomes = phenomes,
+            models = models,
+            n_replications = n_replications,
+            n_folds = n_folds,
+            verbose = verbose,
+        )
     else
         nothing, nothing
     end
-    # Leave-one-population-out CV
-    cvs_lopo, notes_lopo =  if dim_genomes["n_populations"] > 1
-        cvleaveonepopulationout(genomes=genomes, phenomes=phenomes, models=models, n_replications=n_replications, n_folds=n_folds, verbose=verbose)
+    # Leave-one-population-out CV, i.e. if not builk CV (across all populations) and there are more than 1 population
+    cvs_lopo, notes_lopo = if !bulk_cv && (dim_genomes["n_populations"] > 1)
+        cvleaveonepopulationout(
+            genomes = genomes,
+            phenomes = phenomes,
+            models = models,
+            n_replications = n_replications,
+            n_folds = n_folds,
+            verbose = verbose,
+        )
     else
         nothing, nothing
     end
@@ -57,7 +90,7 @@ function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
         if verbose && length(notes_bulk) > 0
             println("Notes on bulk CV:")
             @show notes_bulk
-        end    
+        end
     end
     if !isnothing(cvs_perpop)
         df_1, df_2 = summarise(cvs_perpop)
@@ -73,7 +106,7 @@ function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
         if verbose && length(notes_perpop) > 0
             println("Notes on perpop CV:")
             @show notes_perpop
-        end    
+        end
     end
     if !isnothing(cvs_pairwise)
         df_1, df_2 = summarise(cvs_pairwise)
@@ -89,7 +122,7 @@ function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
         if verbose && length(notes_pairwise) > 0
             println("Notes on pairwise CV:")
             @show notes_pairwise
-        end    
+        end
     end
     if !isnothing(cvs_lopo)
         df_1, df_2 = summarise(cvs_lopo)
@@ -105,7 +138,7 @@ function assess(input::GBInput)::Tuple{DataFrame, DataFrame}
         if verbose && length(notes_lopo) > 0
             println("Notes on lopo CV:")
             @show notes_lopo
-        end    
+        end
     end
     # Output
     (df_across, df_per_entry)

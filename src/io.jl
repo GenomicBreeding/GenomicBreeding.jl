@@ -17,12 +17,13 @@ Input struct
 
 - `fname_geno`: genotype file (see file format guide: **TODO:** {URL HERE})
 - `fname_pheno`: phenotype file (see file format guide: **TODO:** {URL HERE})
-- `bulk_cv`: perform cross-validation across all populations, i.e. disregards population grouping (Default = false)
+- `bulk_cv`: perform cross-validation across all populations, i.e. disregard population grouping (Default = false)
 - `populations`: include only these populations (Default = nothing which means include all populations)
 - `traits`: include only these traits (Default = nothing which means include all traits)
 - `models`: include these model functions (Default = [ridge, bayesa]; see models list: **TODO:** {URL HERE})
 - `n_folds`: number of k partitions for k-fold cross-validation (Default = 5)
 - `n_replications`: number of replications for repeated k-fold cross-validation (Default = 5)
+- `keep_all`: keep all entries upon merging genomes and phenomes potentially resulting in sparsities in both structs? (Default = false)
 - `maf`: minimum allele frequency (Default = 0.05)
 - `mtv`: minimum trait variance (Default = 1e-7)
 - `verbose`: show messages (Default = true)
@@ -31,39 +32,30 @@ mutable struct GBInput
     fname_geno::String
     fname_pheno::String
     bulk_cv::Bool
-    populations::Union{Nothing, String, Vector{String}}
-    traits::Union{Nothing, String, Vector{String}}
+    populations::Union{Nothing,String,Vector{String}}
+    traits::Union{Nothing,String,Vector{String}}
     models::Any
     n_folds::Int64
     n_replications::Int64
+    keep_all::Bool
     maf::Float64
     mtv::Float64
     verbose::Bool
-    function GBInput(;fname_geno::String,
+    function GBInput(;
+        fname_geno::String,
         fname_pheno::String,
         bulk_cv::Bool = false,
-        populations::Union{Nothing, String, Vector{String}} = nothing,
-        traits::Union{Nothing, String, Vector{String}} = nothing,
+        populations::Union{Nothing,String,Vector{String}} = nothing,
+        traits::Union{Nothing,String,Vector{String}} = nothing,
         models::Any = [ridge, bayesa],
         n_folds::Int64 = 5,
         n_replications::Int64 = 5,
+        keep_all::Bool = false,
         maf::Float64 = 0.05,
         mtv::Float64 = 1e-7,
         verbose::Bool = true,
     )
-        new(
-            fname_geno,
-            fname_pheno,
-            bulk_cv,
-            populations,
-            traits,
-            models,
-            n_folds,
-            n_replications,
-            maf,
-            mtv,
-            verbose,
-        )
+        new(fname_geno, fname_pheno, bulk_cv, populations, traits, models, n_folds, n_replications, keep_all, maf, mtv, verbose)
     end
 end
 
@@ -94,7 +86,7 @@ true
 julia> length(phenomes.traits) == 1
 true
 """
-function load(input::GBInput)::Tuple{Genomes, Phenomes}
+function load(input::GBInput)::Tuple{Genomes,Phenomes}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -113,38 +105,60 @@ function load(input::GBInput)::Tuple{Genomes, Phenomes}
     # models = input.models
     n_folds = input.n_folds
     # n_replications = input.n_replications
+    keep_all = input.keep_all
     maf = input.maf
     mtv = input.mtv
     verbose = input.verbose
     # Load genomes and phenomes
     genomes = try
-        readdelimited(Genomes, fname=fname_geno)
+        readdelimited(Genomes, fname = fname_geno)
     catch
         try
-            readjld2(Genomes, fname=fname_geno)
+            readjld2(Genomes, fname = fname_geno)
         catch
             try
-                readvcf(fname=fname_geno)
-                @warn "The vcf file: `" * fname_geno * "` lacks population grouping information. This will likely result in conflicts in merging with th phenotype data."
+                readvcf(fname = fname_geno)
+                @warn "The vcf file: `" *
+                      fname_geno *
+                      "` lacks population grouping information. This will likely result in conflicts in merging with th phenotype data."
             catch
-                throw(ArgumentError("Unrecognised genotype file format: `" * fname_geno * "`.\n" * 
-                "Please refer to the file format guide: **TODO:** {URL HERE}"))
+                throw(
+                    ArgumentError(
+                        "Unrecognised genotype file format: `" *
+                        fname_geno *
+                        "`.\n" *
+                        "Please refer to the file format guide: **TODO:** {URL HERE}",
+                    ),
+                )
             end
         end
     end
     phenomes = try
-        readdelimited(Phenomes, fname=fname_pheno)
+        readdelimited(Phenomes, fname = fname_pheno)
     catch
         try
-            readjld2(Phenomes, fname=fname_pheno)
+            readjld2(Phenomes, fname = fname_pheno)
         catch
-            throw(ArgumentError("Unrecognised phenotype file format: `" * fname_pheno * "`.\n" * 
-            "Please refer to the file format guide: **TODO:** {URL HERE}"))
+            throw(
+                ArgumentError(
+                    "Unrecognised phenotype file format: `" *
+                    fname_pheno *
+                    "`.\n" *
+                    "Please refer to the file format guide: **TODO:** {URL HERE}",
+                ),
+            )
         end
     end
+    if verbose
+        println("Loaded")
+        println("\t- genomes:")
+        @show dimensions(genomes)
+        println("\t- phenomes:")
+        @show dimensions(phenomes)
+    end
     # Merge the genomes and phenomes
-    genomes, phenomes = merge(genomes, phenomes)
-    # Slice by population and traits
+    genomes, phenomes = merge(genomes, phenomes, keep_all=keep_all)
+    # Prepare population/s and trait/s to retain
     populations = if isnothing(populations)
         unique(sort(genomes.populations))
     else
@@ -176,65 +190,122 @@ function load(input::GBInput)::Tuple{Genomes, Phenomes}
     if length(unrecognised_traits) > 0
         throw(ArgumentError("Unrecognised trait/s:\n\t‣ " * join(unrecognised_traits, "\n\t‣ ")))
     end
-    # Check if we have enough entries per fold
-    if !bulk_cv
-        for population in populations
-            n = sum(genomes.populations .== population)
-            if (n/n_folds) < 10
-                throw(ArgumentError("The numer of entries in population: `" * population * "` results in less than 10 entries per " *
-                string(n_folds) *"-fold cross-validation. " * 
-                "Please consider reducing the number of folds or setting `cv_bulk = true`."))
-            end
-        end
-    end
-    idx_traits = findall([sum(traits .== trait) > 0 for trait in phenomes.traits])
+    # Define the entries to retain in bothe phenomes and genomes
     idx_entries = findall([sum(populations .== pop) > 0 for pop in genomes.populations])
-    n = length(idx_entries)
-    if (n / n_folds) < 10
-        throw(ArgumentError("The number of entries left after filtering by populations results in less than 10 entries per " *
-        string(n_folds) *"-fold cross-validation. " * 
-        "Please consider reducing the number of folds or including more populations."))
-    end
     # Slice phenomes to retain only the requested population/s and/or trait/s
     if length(populations) < length(all_populations)
-        phenomes = slice(phenomes, idx_entries=idx_entries)
+        phenomes = slice(phenomes, idx_entries = idx_entries)
     end
     if length(traits) < length(phenomes.traits)
-        phenomes = slice(phenomes, idx_traits=idx_traits)
+        idx_traits = findall([sum(traits .== trait) > 0 for trait in phenomes.traits])
+        phenomes = slice(phenomes, idx_traits = idx_traits)
+    end
+    if verbose
+        println("Merged")
+        println("\t- genomes:")
+        @show dimensions(genomes)
+        println("\t- phenomes:")
+        @show dimensions(phenomes)
     end
     # Filter phenomes by mtv, i.e. retain traits with variance
     fixed_traits = []
     for trait in phenomes.traits
         # trait = phenomes.traits[1]
-        if var(phenomes.phenotypes[:, phenomes.traits .== trait]) < mtv
+        y = phenomes.phenotypes[:, phenomes.traits.==trait][:, 1]
+        y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
+        if length(y) > 0
+            if var(y) < mtv
+                push!(fixed_traits, trait)
+            end
+        else
             push!(fixed_traits, trait)
         end
     end
     if length(fixed_traits) > 0
-        @warn "Excluding the following fixed trait/s:\n\t‣ " * join(fixed_traits, "\n\t‣ ")
+        @warn "Excluding the following fixed (or all values are missing/NaN/Infinities) trait/s:\n\t‣ " *
+              join(fixed_traits, "\n\t‣ ")
         idx_traits = findall([sum(fixed_traits .== trait) == 0 for trait in phenomes.traits])
         if length(idx_traits) == 0
-            throw(ArgumentError("All requested traits are fixed, i.e.\n\t‣ " * join(phenomes.traits, "\n\t‣ ") * "\n. On the following requested populations:\n\t‣ " * join(populations, "\n\t‣ ")))
+            throw(
+                ArgumentError(
+                    "All requested traits are fixed, i.e.\n\t‣ " *
+                    join(phenomes.traits, "\n\t‣ ") *
+                    "\n. On the following requested populations:\n\t‣ " *
+                    join(populations, "\n\t‣ "),
+                ),
+            )
         end
-        phenomes = slice(phenomes, idx_traits=idx_traits)
+        phenomes = slice(phenomes, idx_traits = idx_traits)
     end
-    # Slice the genomes to retain only the requested populations
+    # Check if we have enough entries per fold
+    if !bulk_cv && (length(unique(phenomes.populations)) > 1)
+        # Per trait per population, is we do not wish bulk CV and we have more than 1 population
+        for trait in phenomes.traits
+            for population in phenomes.populations
+                # trait=phenomes.traits[1]; population=phenomes.populations[1];
+                y = phenomes.phenotypes[phenomes.populations.==population, phenomes.traits.==trait][:, 1]
+                y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
+                if ceil(length(y) / n_folds) < 5
+                    throw(
+                        ArgumentError(
+                            "The numer of entries in population: `" *
+                            population *
+                            "` (n=" * string(length(y)) * ") results in less than 5 entries per " *
+                            string(n_folds) *
+                            "-fold cross-validation. " *
+                            "Please consider reducing the number of " *
+                            "folds for this specific population or setting `cv_bulk = true`.",
+                        ),
+                    )
+                end
+            end
+        end
+    else
+        # Per trait across all populations - bulked
+        for trait in phenomes.traits
+            # trait = phenomes.traits[1]
+            y = phenomes.phenotypes[:, phenomes.traits.==trait][:, 1]
+            y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
+            if ceil(length(y) / n_folds) < 5
+                throw(
+                    ArgumentError(
+                        "The numer of entries across all populations " *
+                        "results in less than 5 entries per " *
+                        string(n_folds) *
+                        "-fold cross-validation. " *
+                        "Please consider reducing the number of folds or " *
+                        "setting `cv_bulk = true`.",
+                    ),
+                )
+            end
+        end 
+    end
+    # Finally, slice the genomes to retain only the requested populations
+    # Note that we delayed this for computational efficiency,
+    # i.e. to catch errors with the Phenomes struct before processing this potentially massive Genomes struct.
     if length(populations) < length(all_populations)
-        genomes = slice(genomes, idx_entries=idx_entries)
+        genomes = slice(genomes, idx_entries = idx_entries)
     end
     # Filter genomes by maf (minimum allele frequency)
     genomes = filter(genomes, maf)
     # Show dimensions of the input genomes and phenomes after merging and filterings
     if verbose
-        println("Genomes: ")
+        println("Filtered")
+        println("\t- genomes:")
         @show dimensions(genomes)
-        println("Phenomes: ")
+        println("\t- phenomes:")
         @show dimensions(phenomes)
     end
     # Output
     if genomes.entries != phenomes.entries
-        throw(ErrorException("Error loading the genomes and phenomes data from:\n\t‣ Genotype file: " * fname_geno * "\n\t‣ Phenotype file: " * fname_pheno))
+        throw(
+            ErrorException(
+                "Error loading the genomes and phenomes data from:\n\t‣ Genotype file: " *
+                fname_geno *
+                "\n\t‣ Phenotype file: " *
+                fname_pheno,
+            ),
+        )
     end
     (genomes, phenomes)
 end
-

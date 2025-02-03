@@ -20,6 +20,7 @@ GBPlots = {rev = "main", url = "https://github.com/GenomicBreeding/GBPlots.jl"}
 [compat]
 DataFrames = "1.7.0"
 GBCore = "1.0.0"
+GBModels = "1.0.0"
 StatsBase = "0.34.4"
 julia = "1.11"
 

@@ -39,6 +39,6 @@ using StatsBase, DataFrames
 include("io.jl")
 include("genomic_prediction.jl")
 
-export GBInput, load
+export GBInput, load, assess
 
 end
