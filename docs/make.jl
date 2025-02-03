@@ -8,12 +8,11 @@ makedocs(;
     authors = "jeffersonparil@gmail.com",
     sitename = "GenomicBreeding.jl",
     format = Documenter.HTML(;
-        canonical = "https://jeffersonfparil.github.io/GenomicBreeding.jl",
+        canonical = "https://GenomicBreeding.github.io/GenomicBreeding.jl",
         edit_link = "main",
         assets = String[],
     ),
-    # pages = ["Home" => "index.md"],
-    pages = ["index.md", "simulations.md", "models.md"],
+    pages = ["Home" => "index.md"],
 )
 
-deploydocs(; repo = "github.com/jeffersonfparil/GenomicBreeding.jl", devbranch = "main")
+deploydocs(; repo = "github.com/GenomicBreeding/GenomicBreeding.jl", devbranch = "main")
