@@ -158,6 +158,13 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     end
     # Merge the genomes and phenomes
     genomes, phenomes = merge(genomes, phenomes, keep_all=keep_all)
+    if verbose
+        println("Merged")
+        println("\t- genomes:")
+        @show dimensions(genomes)
+        println("\t- phenomes:")
+        @show dimensions(phenomes)
+    end
     # Prepare population/s and trait/s to retain
     populations = if isnothing(populations)
         unique(sort(genomes.populations))
@@ -190,7 +197,7 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     if length(unrecognised_traits) > 0
         throw(ArgumentError("Unrecognised trait/s:\n\t‣ " * join(unrecognised_traits, "\n\t‣ ")))
     end
-    # Define the entries to retain in bothe phenomes and genomes
+    # Define the entries to retain in both phenomes and genomes
     idx_entries = findall([sum(populations .== pop) > 0 for pop in genomes.populations])
     # Slice phenomes to retain only the requested population/s and/or trait/s
     if length(populations) < length(all_populations)
@@ -199,13 +206,6 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     if length(traits) < length(phenomes.traits)
         idx_traits = findall([sum(traits .== trait) > 0 for trait in phenomes.traits])
         phenomes = slice(phenomes, idx_traits = idx_traits)
-    end
-    if verbose
-        println("Merged")
-        println("\t- genomes:")
-        @show dimensions(genomes)
-        println("\t- phenomes:")
-        @show dimensions(phenomes)
     end
     # Filter phenomes by mtv, i.e. retain traits with variance
     fixed_traits = []
