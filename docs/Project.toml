@@ -1,4 +1,5 @@
 [deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GBCore = "50d95318-1838-4cfa-a614-3543b4bb0509"
 GBIO = "f6f5bf5f-7369-4de1-9a2f-51e3ce5e0754"
