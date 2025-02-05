@@ -55,7 +55,20 @@ mutable struct GBInput
         mtv::Float64 = 1e-7,
         verbose::Bool = true,
     )
-        new(fname_geno, fname_pheno, bulk_cv, populations, traits, models, n_folds, n_replications, keep_all, maf, mtv, verbose)
+        new(
+            fname_geno,
+            fname_pheno,
+            bulk_cv,
+            populations,
+            traits,
+            models,
+            n_folds,
+            n_replications,
+            keep_all,
+            maf,
+            mtv,
+            verbose,
+        )
     end
 end
 
@@ -65,7 +78,7 @@ end
 Load, merge and filter genotype and phenotype data
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding)
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
 julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
 julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
@@ -85,6 +98,9 @@ true
 
 julia> length(phenomes.traits) == 1
 true
+
+julia> rm.([fname_geno, fname_pheno]);
+```
 """
 function load(input::GBInput)::Tuple{Genomes,Phenomes}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
@@ -150,24 +166,28 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
         end
     end
     if verbose
-        println("Loaded")
-        println("\t- genomes:")
-        @show dimensions(genomes)
-        println("\t- phenomes:")
-        @show dimensions(phenomes)
+        println("##############")
+        println("### Loaded ###")
+        println("##############")
+        println("- genomes:")
+        display(dimensions(genomes))
+        println("- phenomes:")
+        display(dimensions(phenomes))
     end
     # Merge the genomes and phenomes
-    genomes, phenomes = merge(genomes, phenomes, keep_all=keep_all)
+    genomes, phenomes = merge(genomes, phenomes, keep_all = keep_all)
     if verbose
-        println("Merged")
-        println("\t- genomes:")
-        @show dimensions(genomes)
-        println("\t- phenomes:")
-        @show dimensions(phenomes)
+        println("##############")
+        println("### Merged ###")
+        println("##############")
+        println("- genomes:")
+        display(dimensions(genomes))
+        println("- phenomes:")
+        display(dimensions(phenomes))
     end
     # Prepare population/s and trait/s to retain
     populations = if isnothing(populations)
-        unique(sort(genomes.populations))
+        unique(sort(phenomes.populations))
     else
         populations
     end
@@ -177,7 +197,7 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
         traits
     end
     # Check population names
-    all_populations = unique(sort(genomes.populations))
+    all_populations = unique(sort(phenomes.populations))
     unrecognised_populations = []
     for pop in populations
         if !(pop ∈ all_populations)
@@ -250,7 +270,9 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
                         ArgumentError(
                             "The numer of entries in population: `" *
                             population *
-                            "` (n=" * string(length(y)) * ") results in less than 5 entries per " *
+                            "` (n=" *
+                            string(length(y)) *
+                            ") results in less than 5 entries per " *
                             string(n_folds) *
                             "-fold cross-validation. " *
                             "Please consider reducing the number of " *
@@ -278,7 +300,7 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
                     ),
                 )
             end
-        end 
+        end
     end
     # Finally, slice the genomes to retain only the requested populations
     # Note that we delayed this for computational efficiency,
@@ -290,11 +312,13 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     genomes = filter(genomes, maf)
     # Show dimensions of the input genomes and phenomes after merging and filterings
     if verbose
-        println("Filtered")
-        println("\t- genomes:")
-        @show dimensions(genomes)
-        println("\t- phenomes:")
-        @show dimensions(phenomes)
+        println("################")
+        println("### Filtered ###")
+        println("################")
+        println("- genomes:")
+        display(dimensions(genomes))
+        println("- phenomes:")
+        display(dimensions(phenomes))
     end
     # Output
     if genomes.entries != phenomes.entries

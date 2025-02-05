@@ -1,3 +1,31 @@
+"""
+    assess(input::GBInput)::Tuple{DataFrame,DataFrame}
+
+Assess genomic prediction accuracy via replicated k-fold cross-validation
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
+julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
+
+julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], verbose=false);
+
+julia> genomes, phenomes = load(input);
+
+julia> length(unique(genomes.populations)) == length(unique(phenomes.populations)) == 2
+true
+
+julia> length(phenomes.traits) == 1
+true
+```
+"""
 function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
     # genomes = GBCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
