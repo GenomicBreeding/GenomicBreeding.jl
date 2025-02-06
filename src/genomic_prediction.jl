@@ -17,7 +17,7 @@ julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
 
 julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], models=[ridge, bayesa], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> df_across, df_per_entry = assess(input);
 
@@ -185,7 +185,7 @@ julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
 
 julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], models=[ridge, bayesa], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> effects = extracteffects(input);
 
