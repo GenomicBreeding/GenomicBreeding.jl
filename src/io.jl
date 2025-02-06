@@ -10,6 +10,8 @@
         n_replications::Int64
         maf::Float64
         mtv::Float64
+        n_iter::Int64,
+        n_burnin::Int64,
         verbose::Bool
     end
 
@@ -26,6 +28,8 @@ Input struct
 - `keep_all`: keep all entries upon merging genomes and phenomes potentially resulting in sparsities in both structs? (Default = false)
 - `maf`: minimum allele frequency (Default = 0.05)
 - `mtv`: minimum trait variance (Default = 1e-7)
+- `n_iter`: number of Bayesian model fitting MCMC/HMC iteration (Default = 1_500)
+- `n_burnin`: number of initial Bayesian model fitting MCMC/HMC iterations to be excluded from the posterior distribution (Default = 500)
 - `verbose`: show messages (Default = true)
 """
 mutable struct GBInput
@@ -40,6 +44,8 @@ mutable struct GBInput
     keep_all::Bool
     maf::Float64
     mtv::Float64
+    n_iter::Int64
+    n_burnin::Int64
     verbose::Bool
     function GBInput(;
         fname_geno::String,
@@ -53,6 +59,8 @@ mutable struct GBInput
         keep_all::Bool = false,
         maf::Float64 = 0.05,
         mtv::Float64 = 1e-7,
+        n_iter::Int64 = 1_500,
+        n_burnin::Int64 = 500,
         verbose::Bool = true,
     )
         new(
@@ -67,6 +75,8 @@ mutable struct GBInput
             keep_all,
             maf,
             mtv,
+            n_iter,
+            n_burnin,
             verbose,
         )
     end
@@ -118,9 +128,7 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     bulk_cv = input.bulk_cv
     populations = input.populations
     traits = input.traits
-    # models = input.models
     n_folds = input.n_folds
-    # n_replications = input.n_replications
     keep_all = input.keep_all
     maf = input.maf
     mtv = input.mtv

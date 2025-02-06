@@ -1,6 +1,11 @@
 using Pkg
 Pkg.activate(".")
-Pkg.update()
+try
+    Pkg.update()
+catch
+    nothing
+end
 using GenomicBreeding
 using GBCore, GBIO, GBModels, GBPlots
 using StatsBase, DataFrames
+using ProgressMeter, UnicodePlots

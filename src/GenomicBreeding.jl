@@ -14,6 +14,7 @@ using GBIO
 # export writejld2, writedelimited, writevcf
 
 using GBModels
+import GBModels: ols, ridge, lasso, bayesa, bayesb, bayesc
 # export metrics
 # export extractxyetc, predict
 # export grmsimple, grmploidyaware
@@ -35,10 +36,12 @@ using GBPlots
 # export plotstatic, plotinteractive2d
 
 using StatsBase, DataFrames
+using ProgressMeter, UnicodePlots
+
 
 include("io.jl")
 include("genomic_prediction.jl")
 
-export GBInput, load, assess
+export GBInput, load, assess, extracteffects
 
 end
