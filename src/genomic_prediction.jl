@@ -1,7 +1,8 @@
 """
-    assess(input::GBInput)::Tuple{DataFrame,DataFrame}
+    assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
 
-Assess genomic prediction accuracy via replicated k-fold cross-validation
+Assess genomic prediction accuracy via replicated k-fold cross-validation.
+Outputs are saved as JLD2 (each containing a CV struct) and TXT (each line is a note on failed runs) files.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -19,15 +20,13 @@ julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
-julia> df_across, df_per_entry = assess(input);
+julia> fnames_cvs, fnames_notes = assess(input);
 
-julia> df_agg = combine(groupby(df_across, :model), :cor_mean => mean);
-
-julia> df_agg.cor_mean_mean[df_agg.model .== "ridge"] < df_agg.cor_mean_mean[df_agg.model .== "bayesa"]
-true
+julia> length(fnames_cvs) == 32, length(fnames_notes) == 0
+(true, true)
 ```
 """
-function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
+function assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
     # genomes = GBCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -39,14 +38,56 @@ function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
     models = input.models
     n_folds = input.n_folds
     n_replications = input.n_replications
+    fname_out_prefix = input.fname_out_prefix
     verbose = input.verbose
     # Load genomes and phenomes
     genomes, phenomes = load(input)
     dim_genomes = dimensions(genomes)
-    dim_phenomes = dimensions(phenomes)
-    # Bulk CV or if there is only one population
-    cvs_bulk, notes_bulk = if bulk_cv || (dim_genomes["n_populations"] == 1)
-        cvbulk(
+    # List the cross-validation function/s to use
+    cv_functions = if !bulk_cv && (dim_genomes["n_populations"] > 1)
+        [cvperpopulation, cvpairwisepopulation, cvleaveonepopulationout]
+    else
+        [cvbulk]
+    end
+    # Instantiate the vector of output filenames
+    fnames_cvs::Vector{String} = []
+    fnames_notes::Vector{String} = []
+    # Instantiate the output directory if it does not exist
+    if !isdir(dirname(fname_out_prefix))
+        try
+            mkdir(dirname(fname_out_prefix))
+        catch
+            throw(ArgumentError("Error creating the output directory: `" * dirname(fname_out_prefix) * "`"))
+        end
+    end
+    # Make sure we do not have any problematic symbols in the output filenames
+    directory_name = dirname(fname_out_prefix)
+    prefix_name = basename(fname_out_prefix)
+    problematic_strings::Vector{String} = [" ", "\n", "\t", "(", ")", "&", "|", ":", "=", "+", "*", "%"]
+    for s in problematic_strings
+        prefix_name = replace(prefix_name, s => "_")
+    end
+    if fname_out_prefix != joinpath(directory_name, prefix_name)
+        @warn "Modifying the user defined `fname_out_prefix` as it contains problematic symbols, i.e. from `" *
+              fname_out_prefix *
+              "` into `" *
+              joinpath(directory_name, prefix_name) *
+              "`."
+        fname_out_prefix = joinpath(directory_name, prefix_name)
+    end
+    if sum(.!isnothing.(match.(Regex(prefix_name), readdir(directory_name)))) > 0
+        throw(
+            ErrorException(
+                "Files with the same prefix (`" *
+                fname_out_prefix *
+                "`) please remove/rename the files or modify `fname_out_prefix`.",
+            ),
+        )
+    end
+    # Cross-validate
+    for f in cv_functions
+        # f = cv_functions[1]
+        cvs, notes = f(
             genomes = genomes,
             phenomes = phenomes,
             models = models,
@@ -54,120 +95,28 @@ function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
             n_folds = n_folds,
             verbose = verbose,
         )
-    else
-        nothing, nothing
-    end
-    # Per population CV, i.e. if not builk CV (across all populations) and there are more than 1 population
-    cvs_perpop, notes_perpop = if !bulk_cv && (dim_genomes["n_populations"] > 1)
-        cvperpopulation(
-            genomes = genomes,
-            phenomes = phenomes,
-            models = models,
-            n_replications = n_replications,
-            n_folds = n_folds,
-            verbose = verbose,
-        )
-    else
-        (nothing, nothing)
-    end
-    # Pairwise population CV, i.e. if not builk CV (across all populations) and there are more than 1 population
-    cvs_pairwise, notes_pairwise = if !bulk_cv && (dim_genomes["n_populations"] > 1)
-        cvpairwisepopulation(
-            genomes = genomes,
-            phenomes = phenomes,
-            models = models,
-            n_replications = n_replications,
-            n_folds = n_folds,
-            verbose = verbose,
-        )
-    else
-        nothing, nothing
-    end
-    # Leave-one-population-out CV, i.e. if not builk CV (across all populations) and there are more than 1 population
-    cvs_lopo, notes_lopo = if !bulk_cv && (dim_genomes["n_populations"] > 1)
-        cvleaveonepopulationout(
-            genomes = genomes,
-            phenomes = phenomes,
-            models = models,
-            n_replications = n_replications,
-            n_folds = n_folds,
-            verbose = verbose,
-        )
-    else
-        nothing, nothing
-    end
-    # Summarise
-    df_across, df_per_entry = nothing, nothing
-    if !isnothing(cvs_bulk)
-        df_1, df_2 = summarise(cvs_bulk)
-        df_1.cv_type .= "bulk"
-        df_2.cv_type .= "bulk"
-        if isnothing(df_across)
-            df_across = df_1
-            df_per_entry = df_2
-        else
-            df_across = [df_across; df_1]
-            df_per_entry = [df_per_entry; df_2]
+        for (i, cv) in enumerate(cvs)
+            # i = 1; cv = cvs[i];
+            fname = string(fname_out_prefix, f, "-", lpad(string(i), 10, "0"), ".jld2")
+            writejld2(cv, fname = fname)
+            push!(fnames_cvs, fname)
         end
-        if verbose && length(notes_bulk) > 0
-            println("Notes on bulk CV:")
-            @show notes_bulk
-        end
-    end
-    if !isnothing(cvs_perpop)
-        df_1, df_2 = summarise(cvs_perpop)
-        df_1.cv_type .= "perpop"
-        df_2.cv_type .= "perpop"
-        if isnothing(df_across)
-            df_across = df_1
-            df_per_entry = df_2
-        else
-            df_across = [df_across; df_1]
-            df_per_entry = [df_per_entry; df_2]
-        end
-        if verbose && length(notes_perpop) > 0
-            println("Notes on perpop CV:")
-            @show notes_perpop
-        end
-    end
-    if !isnothing(cvs_pairwise)
-        df_1, df_2 = summarise(cvs_pairwise)
-        df_1.cv_type .= "pairwise"
-        df_2.cv_type .= "pairwise"
-        if isnothing(df_across)
-            df_across = df_1
-            df_per_entry = df_2
-        else
-            df_across = [df_across; df_1]
-            df_per_entry = [df_per_entry; df_2]
-        end
-        if verbose && length(notes_pairwise) > 0
-            println("Notes on pairwise CV:")
-            @show notes_pairwise
-        end
-    end
-    if !isnothing(cvs_lopo)
-        df_1, df_2 = summarise(cvs_lopo)
-        df_1.cv_type .= "lopo"
-        df_2.cv_type .= "lopo"
-        if isnothing(df_across)
-            df_across = df_1
-            df_per_entry = df_2
-        else
-            df_across = [df_across; df_1]
-            df_per_entry = [df_per_entry; df_2]
-        end
-        if verbose && length(notes_lopo) > 0
-            println("Notes on lopo CV:")
-            @show notes_lopo
+        if length(notes) > 0
+            fname = string(fname_out_prefix, f, "-notes.txt")
+            open(fname, "w") do file
+                for note in notes
+                    write(file, note * "\n")
+                end
+            end
+            push!(fnames_notes, fname)
         end
     end
     # Output
-    (df_across, df_per_entry)
+    fnames_cvs, fnames_notes
 end
 
 """
-    extracteffects(input::GBInput)::Vector{DataFrame}
+    extracteffects(input::GBInput)::Vector{String}
 
 Extract allele effects by fitting the models without cross-validation
 
@@ -187,13 +136,13 @@ julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
-julia> effects = extracteffects(input);
+julia> fname_effects = extracteffects(input);
 
-julia> sum([nrow(effects[i]) == nrow(effects[1]) for i in eachindex(effects)]) == length(effects)
+julia> length(fname_effects) == 6
 true
 ```
 """
-function extracteffects(input::GBInput)::Vector{DataFrame}
+function extracteffects(input::GBInput)::Vector{String}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -204,15 +153,41 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
     models = input.models
     n_iter = input.n_iter
     n_burnin = input.n_burnin
+    fname_out_prefix = input.fname_out_prefix
     verbose = input.verbose
-    # Load genomes and phenomes
+    # Load and merge the genomes and phenomes
     genomes, phenomes = load(input)
-    # Fit the entire data to extract effects per trait per model
+    # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
     populations = sort(unique(phenomes.populations))
     traits = phenomes.traits
-    out::Vector{DataFrames.DataFrame} = fill(DataFrame(), (1 + length(populations)) * length(traits) * length(models))
+    dfs::Vector{DataFrames.DataFrame} = fill(DataFrame(), (1 + length(populations)) * length(traits) * length(models))
+    fnames::Vector{String} = fill("", (1 + length(populations)) * length(traits) * length(models))
+    # Instantiate the output directory if it does not exist
+    if !isdir(dirname(fname_out_prefix))
+        try
+            mkdir(dirname(fname_out_prefix))
+        catch
+            throw(ArgumentError("Error creating the output directory: `" * dirname(fname_out_prefix) * "`"))
+        end
+    end
+    # Make sure we do not have any problematic symbols in the output filenames
+    directory_name = dirname(fname_out_prefix)
+    prefix_name = basename(fname_out_prefix)
+    problematic_strings::Vector{String} = [" ", "\n", "\t", "(", ")", "&", "|", ":", "=", "+", "*", "%"]
+    for s in problematic_strings
+        prefix_name = replace(prefix_name, s => "_")
+    end
+    if fname_out_prefix != joinpath(directory_name, prefix_name)
+        @warn "Modifying the user defined `fname_out_prefix` as it contains problematic symbols, i.e. from `" *
+              fname_out_prefix *
+              "` into `" *
+              joinpath(directory_name, prefix_name) *
+              "`."
+        fname_out_prefix = joinpath(directory_name, prefix_name)
+    end
+    # Fit the entire data to extract effects per trait per model
     if verbose
-        pb = ProgressMeter.Progress(length(out); desc = "Extracting allele effects: ")
+        pb = ProgressMeter.Progress(length(dfs); desc = "Extracting allele effects: ")
     end
     for (i, model) in enumerate(models)
         for (j, trait) in enumerate(traits)
@@ -222,20 +197,25 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
+                fname = string(fname_out_prefix, "model_", model, "-trait_", trait, "-population_", population, ".tsv")
+                for s in problematic_strings
+                    fname = replace(fname, s => "_")
+                end
+                if isfile(fname)
+                    throw(ErrorException("The output file: `` exists. Please remove/rename the existing file."))
+                end
                 Γ, Φ = if population == "bulk"
                     (genomes, phenomes)
                 else
-                    (
-                        slice(genomes, idx_entries = findall(genomes.populations .== population)),
-                        slice(phenomes, idx_entries = findall(phenomes.populations .== population)),
-                    )
+                    idx_entries = findall(genomes.populations .== population)
+                    (slice(genomes, idx_entries = idx_entries), slice(phenomes, idx_entries = idx_entries))
                 end
                 fit = if !isnothing(match(Regex("bayes", "i"), string(model)))
                     model(genomes = Γ, phenomes = Φ, n_iter = n_iter, n_burnin = n_burnin, verbose = false)
                 else
                     model(genomes = Γ, phenomes = Φ, verbose = false)
                 end
-                out[idx] = DataFrame(
+                dfs[idx] = DataFrame(
                     model = fit.model,
                     trait = fit.trait,
                     population = population,
@@ -243,6 +223,13 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
                     b_hat_labels = fit.b_hat_labels,
                     b_hat = fit.b_hat,
                 )
+                open(fname, "w") do file
+                    write(file, join(names(dfs[idx]), "\t") * "\n")
+                    for line in eachrow(dfs[idx])
+                        write(file, join(replace.(string.(Vector(line)), "\t" => "-"), "\t") * "\n")
+                    end
+                end
+                fnames[idx] = fname
                 if verbose
                     ProgressMeter.next!(pb)
                 end
@@ -252,18 +239,18 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
     if verbose
         ProgressMeter.finish!(pb)
         ### Correlations between in allele effects
-        C = fill(-Inf, length(out), length(out))
-        for i in eachindex(out)
-            for j in eachindex(out)
-                C[i, j] = cor(out[i].b_hat[2:end], out[j].b_hat[2:end])
-                # model1 = out[i].model[1]; trait1 = out[i].trait[1]; population1 = out[i].population[1]
-                # model2 = out[j].model[1]; trait2 = out[j].trait[1]; population2 = out[j].population[1]
+        C = fill(-Inf, length(dfs), length(dfs))
+        for i in eachindex(dfs)
+            for j in eachindex(dfs)
+                C[i, j] = cor(dfs[i].b_hat[2:end], dfs[j].b_hat[2:end])
+                # model1 = dfs[i].model[1]; trait1 = dfs[i].trait[1]; population1 = dfs[i].population[1]
+                # model2 = dfs[j].model[1]; trait2 = dfs[j].trait[1]; population2 = dfs[j].population[1]
                 # println(join([model1, trait1, population1], "|"), " vs ",join([model2, trait2, population2], "|"), ": ", round(C[i, j], digits=2))
             end
         end
         p = UnicodePlots.heatmap(C, title = "Correlation between allele effects")
         display(p)
     end
-    # Output dataframes one for each model-trait-poulation combination
-    out
+    # Output filnames of the tab-delimited files containing the tables of allele effects
+    fnames
 end

@@ -35,13 +35,14 @@ using GBPlots
 # export checkdims, labeltofname, saveplots
 # export plotstatic, plotinteractive2d
 
-using StatsBase, DataFrames
+using StatsBase, DataFrames, Dates
 using ProgressMeter, UnicodePlots
 
 
 include("io.jl")
 include("genomic_prediction.jl")
 
-export GBInput, load, assess, extracteffects
+export GBInput, load, submitslurmarrayjobs
+export assess, extracteffects
 
 end

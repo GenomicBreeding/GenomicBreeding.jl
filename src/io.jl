@@ -12,10 +12,11 @@
         mtv::Float64
         n_iter::Int64,
         n_burnin::Int64,
+        fname_out_prefix::String,
         verbose::Bool
     end
 
-Input struct
+Input struct (belongs to GBCore.AbstractGB type)
 
 - `fname_geno`: genotype file (see file format guide: **TODO:** {URL HERE})
 - `fname_pheno`: phenotype file (see file format guide: **TODO:** {URL HERE})
@@ -29,10 +30,12 @@ Input struct
 - `maf`: minimum allele frequency (Default = 0.05)
 - `mtv`: minimum trait variance (Default = 1e-7)
 - `n_iter`: number of Bayesian model fitting MCMC/HMC iteration (Default = 1_500)
+- `fname_out_prefix`: prefix of the output files which may include directory names (Default = "" which translates to `./GBOuput/output-<yyyymmddHHMMSS>-<3_digit_random_number>-`)
 - `n_burnin`: number of initial Bayesian model fitting MCMC/HMC iterations to be excluded from the posterior distribution (Default = 500)
+
 - `verbose`: show messages (Default = true)
 """
-mutable struct GBInput
+mutable struct GBInput <: AbstractGB
     fname_geno::String
     fname_pheno::String
     bulk_cv::Bool
@@ -46,6 +49,7 @@ mutable struct GBInput
     mtv::Float64
     n_iter::Int64
     n_burnin::Int64
+    fname_out_prefix::String
     verbose::Bool
     function GBInput(;
         fname_geno::String,
@@ -61,8 +65,14 @@ mutable struct GBInput
         mtv::Float64 = 1e-7,
         n_iter::Int64 = 1_500,
         n_burnin::Int64 = 500,
+        fname_out_prefix::String = "",
         verbose::Bool = true,
     )
+        fname_out_prefix = if fname_out_prefix == ""
+            date = Dates.format(now(), "yyyymmddHHMMSS")
+            randnum = Int(round(1_000 * rand()))
+            string("GBOutput/output-", date, "-", randnum, "-")
+        end
         new(
             fname_geno,
             fname_pheno,
@@ -77,6 +87,7 @@ mutable struct GBInput
             mtv,
             n_iter,
             n_burnin,
+            fname_out_prefix,
             verbose,
         )
     end
@@ -340,4 +351,130 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
         )
     end
     (genomes, phenomes)
+end
+
+
+"""
+    submitslurmarrayjobs(
+        fname_geno::String,
+        fname_pheno::String;
+        models::Any = [ridge, bayesa],
+        n_folds::Int64 = 5,
+        n_replications::Int64 = 5,
+        maf::Float64 = 0.05,
+        mtv::Float64 = 1e-7,
+        n_iter::Int64 = 1_500,
+        n_burnin::Int64 = 500,
+        fname_out_prefix::String = "",
+        verbose::Bool = true,
+    )::Vector{GBInput}
+
+TODO: submit Slurm array job
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
+julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> inputs = submitslurmarrayjobs(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+
+julia> length(inputs) == 24
+true
+
+julia> rm.([fname_geno, fname_pheno]);
+```
+"""
+function submitslurmarrayjobs(;
+    fname_geno::String,
+    fname_pheno::String,
+    models::Any = [ridge, bayesa],
+    n_folds::Int64 = 5,
+    n_replications::Int64 = 5,
+    maf::Float64 = 0.05,
+    mtv::Float64 = 1e-7,
+    n_iter::Int64 = 1_500,
+    n_burnin::Int64 = 500,
+    fname_out_prefix::String = "",
+    SLURM_INPUT::String = "",
+    verbose::Bool = true,
+)::Vector{GBInput}
+    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # phenomes = extractphenomes(trials)
+    # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+    # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
+    # models = [ridge, bayesa]; n_folds = 5; n_replications = 5; maf = 0.05; mtv = 1e-7; n_iter = 1_500; n_burnin = 500; fname_out_prefix = ""; verbose = true;
+    # Load genomes and phenomes to check their validity and dimensions
+    input_all = GBInput(
+        fname_geno = fname_geno,
+        fname_pheno = fname_pheno,
+        bulk_cv = false,
+        models = models,
+        n_folds = n_folds,
+        n_replications = n_replications,
+        maf = maf,
+        mtv = mtv,
+        n_iter = n_iter,
+        n_burnin = n_burnin,
+        fname_out_prefix = fname_out_prefix,
+        verbose = verbose,
+    )
+    genomes, phenomes = load(input_all)
+    # Count the number of models, traits, and populations
+    m = length(models)
+    t = length(phenomes.traits)
+    p = length(unique(phenomes.populations))
+    # Prepare the GBInputs
+    inputs = if p > 1
+        Vector{GBInput}(undef, m * t * (p + 1))
+    else
+        Vector{GBInput}(undef, m * t * p)
+    end
+    i = 1
+    for model in models
+        for trait in phenomes.traits
+            populations = if p > 1
+                vcat(nothing, sort(unique(phenomes.populations)))
+            else
+                sort(unique(phenomes.populations))
+            end
+            for population in populations
+                bulk_cv = if isnothing(population)
+                    true
+                else
+                    false
+                end
+                inputs[i] = GBInput(
+                    fname_geno = fname_geno,
+                    fname_pheno = fname_pheno,
+                    bulk_cv = bulk_cv,
+                    populations = population,
+                    traits = trait,
+                    models = model,
+                    n_folds = n_folds,
+                    n_replications = n_replications,
+                    keep_all = false,
+                    maf = maf,
+                    mtv = mtv,
+                    n_iter = n_iter,
+                    n_burnin = n_burnin,
+                    fname_out_prefix = fname_out_prefix,
+                    verbose = verbose,
+                )
+                i += 1
+            end
+        end
+    end
+    # Submit Slurm array jobs
+    # TODO
+    inputs
+    # Output
 end

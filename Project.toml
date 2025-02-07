@@ -5,6 +5,7 @@ version = "1.0.0-DEV"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GBCore = "50d95318-1838-4cfa-a614-3543b4bb0509"
 GBIO = "f6f5bf5f-7369-4de1-9a2f-51e3ce5e0754"
@@ -22,6 +23,7 @@ GBPlots = {rev = "main", url = "https://github.com/GenomicBreeding/GBPlots.jl"}
 
 [compat]
 DataFrames = "1.7.0"
+Dates = "1.11.0"
 Documenter = "1.8.0"
 GBCore = "1.0.0"
 GBModels = "1.0.0"
