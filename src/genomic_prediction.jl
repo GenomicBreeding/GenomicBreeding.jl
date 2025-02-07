@@ -13,9 +13,9 @@ julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1
 
 julia> phenomes = extractphenomes(trials);
 
-julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 
-julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
@@ -31,8 +31,8 @@ function assess(input::GBInput)::Tuple{DataFrame,DataFrame}
     # genomes = GBCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
-    # fname_geno = writedelimited(genomes, fname="test-geno.tsv")
-    # fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
+    # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end
+    # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, traits=["trait_1"])
     # Parse input
     bulk_cv = input.bulk_cv
@@ -172,7 +172,7 @@ end
 Extract allele effects by fitting the models without cross-validation
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
 julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
@@ -181,9 +181,9 @@ julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1
 
 julia> phenomes = extractphenomes(trials);
 
-julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 
-julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
@@ -212,14 +212,13 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
     traits = phenomes.traits
     out::Vector{DataFrames.DataFrame} = fill(DataFrame(), (1 + length(populations)) * length(traits) * length(models))
     if verbose
-        pb = ProgressMeter.Progress(length(out); desc="Extracting allele effects: ")
+        pb = ProgressMeter.Progress(length(out); desc = "Extracting allele effects: ")
     end
     for (i, model) in enumerate(models)
         for (j, trait) in enumerate(traits)
             for (k, population) in enumerate(vcat("bulk", populations))
                 # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
-                idx = ((((i-1)*length(traits) + j) - 1) * (1+length(populations))) + k
-                println(idx)
+                idx = ((((i - 1) * length(traits) + j) - 1) * (1 + length(populations))) + k
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
@@ -227,22 +226,22 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
                     (genomes, phenomes)
                 else
                     (
-                        slice(genomes, idx_entries=findall(genomes.populations .== population)),
-                        slice(phenomes, idx_entries=findall(phenomes.populations .== population)),
+                        slice(genomes, idx_entries = findall(genomes.populations .== population)),
+                        slice(phenomes, idx_entries = findall(phenomes.populations .== population)),
                     )
                 end
                 fit = if !isnothing(match(Regex("bayes", "i"), string(model)))
-                    model(genomes=Γ, phenomes=Φ, n_iter=n_iter, n_burnin=n_burnin, verbose=false)
+                    model(genomes = Γ, phenomes = Φ, n_iter = n_iter, n_burnin = n_burnin, verbose = false)
                 else
-                    model(genomes=Γ, phenomes=Φ, verbose=false)
+                    model(genomes = Γ, phenomes = Φ, verbose = false)
                 end
                 out[idx] = DataFrame(
-                    model=fit.model,
-                    trait=fit.trait,
-                    population=population,
-                    fit_corr=fit.metrics["cor"],
-                    b_hat_labels=fit.b_hat_labels,
-                    b_hat=fit.b_hat,
+                    model = fit.model,
+                    trait = fit.trait,
+                    population = population,
+                    fit_corr = fit.metrics["cor"],
+                    b_hat_labels = fit.b_hat_labels,
+                    b_hat = fit.b_hat,
                 )
                 if verbose
                     ProgressMeter.next!(pb)
@@ -262,11 +261,9 @@ function extracteffects(input::GBInput)::Vector{DataFrame}
                 # println(join([model1, trait1, population1], "|"), " vs ",join([model2, trait2, population2], "|"), ": ", round(C[i, j], digits=2))
             end
         end
-        p = UnicodePlots.heatmap(C, title="Correlation between allele effects")
+        p = UnicodePlots.heatmap(C, title = "Correlation between allele effects")
         display(p)
     end
-    # Output
+    # Output dataframes one for each model-trait-poulation combination
     out
 end
-
-
