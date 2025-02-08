@@ -72,6 +72,8 @@ mutable struct GBInput <: AbstractGB
             date = Dates.format(now(), "yyyymmddHHMMSS")
             randnum = Int(round(1_000 * rand()))
             string("GBOutput/output-", date, "-", randnum, "-")
+        else
+            fname_out_prefix
         end
         new(
             fname_geno,
@@ -91,6 +93,99 @@ mutable struct GBInput <: AbstractGB
             verbose,
         )
     end
+end
+
+# """
+#     clone(x::GBInput)::GBInput
+
+# Clone a GBInput object
+
+# ## Example
+# ```jldoctest; setup = :(using GBCore)
+# julia> input = GBInput(n=2, p=2);
+
+# julia> copy_input = clone(input)
+# GBInput(["", ""], ["", ""], ["", ""], Union{Missing, Float64}[missing missing; missing missing], Bool[1 1; 1 1])
+# ```
+# """
+# function clone(x::GBInput)::GBInput
+#     y::GBInput = GBInput(n = length(x.entries), p = length(x.loci_alleles))
+#     y.entries = deepcopy(x.entries)
+#     y.populations = deepcopy(x.populations)
+#     y.loci_alleles = deepcopy(x.loci_alleles)
+#     y.allele_frequencies = deepcopy(x.allele_frequencies)
+#     y.mask = deepcopy(x.mask)
+#     y
+# end
+
+
+# """
+#     Base.hash(x::GBInput, h::UInt)::UInt
+
+# Hash a GBInput struct using the entries, populations and loci_alleles.
+# We deliberately excluded the allele_frequencies, and mask for efficiency.
+
+# ## Examples
+# ```jldoctest; setup = :(using GBCore)
+# julia> input = GBInput(n=2, p=2);
+
+# julia> typeof(hash(input))
+# UInt64
+# ```
+# """
+# function Base.hash(x::GBInput, h::UInt)::UInt
+#     # hash(GBInput, hash(x.entries, hash(x.populations, hash(x.loci_alleles, hash(x.allele_frequencies, hash(x.mask, h))))))
+#     hash(GBInput, hash(x.entries, hash(x.populations, hash(x.loci_alleles, h))))
+# end
+
+
+# """
+#     Base.:(==)(x::GBInput, y::GBInput)::Bool
+
+# Equality of GBInput structs using the hash function defined for GBInput structs.
+
+# ## Examples
+# ```jldoctest; setup = :(using GBCore)
+# julia> input_1 = input = GBInput(n=2,p=4);
+
+# julia> input_2 = input = GBInput(n=2,p=4);
+
+# julia> input_3 = input = GBInput(n=1,p=2);
+
+# julia> input_1 == input_2
+# true
+
+# julia> input_1 == input_3
+# false
+# ```
+# """
+# function Base.:(==)(x::GBInput, y::GBInput)::Bool
+#     hash(x) == hash(y)
+# end
+
+
+# """
+#     checkdims(input::GBInput)::Bool
+
+# Check dimension compatibility of the fields of the GBInput struct
+
+# # Examples
+# ```jldoctest; setup = :(using GBCore)
+# julia> input = GBInput(n=2,p=4);
+
+# julia> checkdims(input)
+# false
+
+# julia> input.entries = ["entry_1", "entry_2"];
+
+# julia> input.loci_alleles = ["chr1\\t1\\tA|T\\tA", "chr1\\t2\\tC|G\\tG", "chr2\\t3\\tA|T\\tA", "chr2\\t4\\tG|T\\tG"];
+
+# julia> checkdims(input)
+# true
+# ```
+# """
+function GBCore.checkdims(input::GBInput)::Bool
+    !isnothing(input.models)
 end
 
 """
@@ -355,21 +450,9 @@ end
 
 
 """
-    submitslurmarrayjobs(
-        fname_geno::String,
-        fname_pheno::String;
-        models::Any = [ridge, bayesa],
-        n_folds::Int64 = 5,
-        n_replications::Int64 = 5,
-        maf::Float64 = 0.05,
-        mtv::Float64 = 1e-7,
-        n_iter::Int64 = 1_500,
-        n_burnin::Int64 = 500,
-        fname_out_prefix::String = "",
-        verbose::Bool = true,
-    )::Vector{GBInput}
+    prepareinputs(input::GBInput)::Vector{GBInput}
 
-TODO: submit Slurm array job
+Prepare GBInputs for Slurm array jobs
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
@@ -383,7 +466,9 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
     
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> inputs = submitslurmarrayjobs(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+
+julia> inputs = prepareinputs(input);
 
 julia> length(inputs) == 24
 true
@@ -391,45 +476,17 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function submitslurmarrayjobs(;
-    fname_geno::String,
-    fname_pheno::String,
-    models::Any = [ridge, bayesa],
-    n_folds::Int64 = 5,
-    n_replications::Int64 = 5,
-    maf::Float64 = 0.05,
-    mtv::Float64 = 1e-7,
-    n_iter::Int64 = 1_500,
-    n_burnin::Int64 = 500,
-    fname_out_prefix::String = "",
-    SLURM_INPUT::String = "",
-    verbose::Bool = true,
-)::Vector{GBInput}
+function prepareinputs(input::GBInput)::Vector{GBInput}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
-    # models = [ridge, bayesa]; n_folds = 5; n_replications = 5; maf = 0.05; mtv = 1e-7; n_iter = 1_500; n_burnin = 500; fname_out_prefix = ""; verbose = true;
     # Load genomes and phenomes to check their validity and dimensions
-    input_all = GBInput(
-        fname_geno = fname_geno,
-        fname_pheno = fname_pheno,
-        bulk_cv = false,
-        models = models,
-        n_folds = n_folds,
-        n_replications = n_replications,
-        maf = maf,
-        mtv = mtv,
-        n_iter = n_iter,
-        n_burnin = n_burnin,
-        fname_out_prefix = fname_out_prefix,
-        verbose = verbose,
-    )
-    genomes, phenomes = load(input_all)
+    genomes, phenomes = load(input)
     # Count the number of models, traits, and populations
-    m = length(models)
+    m = length(input.models)
     t = length(phenomes.traits)
     p = length(unique(phenomes.populations))
     # Prepare the GBInputs
@@ -439,42 +496,43 @@ function submitslurmarrayjobs(;
         Vector{GBInput}(undef, m * t * p)
     end
     i = 1
-    for model in models
+    for model in input.models
+        # model = input.models[1]
         for trait in phenomes.traits
+            # trait = phenomes.traits[1]
             populations = if p > 1
                 vcat(nothing, sort(unique(phenomes.populations)))
             else
                 sort(unique(phenomes.populations))
             end
             for population in populations
-                bulk_cv = if isnothing(population)
-                    true
+                # population = populations[1]
+                bulk_cv, population = if isnothing(population)
+                    true, nothing
                 else
-                    false
+                    false, population
                 end
                 inputs[i] = GBInput(
-                    fname_geno = fname_geno,
-                    fname_pheno = fname_pheno,
+                    fname_geno = input.fname_geno,
+                    fname_pheno = input.fname_pheno,
                     bulk_cv = bulk_cv,
                     populations = population,
                     traits = trait,
                     models = model,
-                    n_folds = n_folds,
-                    n_replications = n_replications,
-                    keep_all = false,
-                    maf = maf,
-                    mtv = mtv,
-                    n_iter = n_iter,
-                    n_burnin = n_burnin,
-                    fname_out_prefix = fname_out_prefix,
-                    verbose = verbose,
+                    n_folds = input.n_folds,
+                    n_replications = input.n_replications,
+                    keep_all = input.keep_all,
+                    maf = input.maf,
+                    mtv = input.mtv,
+                    n_iter = input.n_iter,
+                    n_burnin = input.n_burnin,
+                    fname_out_prefix = input.fname_out_prefix,
+                    verbose = input.verbose,
                 )
                 i += 1
             end
         end
     end
-    # Submit Slurm array jobs
-    # TODO
-    inputs
     # Output
+    inputs
 end

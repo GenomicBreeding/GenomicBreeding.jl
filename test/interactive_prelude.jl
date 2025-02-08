@@ -8,4 +8,4 @@ end
 using GenomicBreeding
 using GBCore, GBIO, GBModels, GBPlots
 using StatsBase, DataFrames
-using ProgressMeter, UnicodePlots
+using Dates, ProgressMeter, UnicodePlots
