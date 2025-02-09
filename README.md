@@ -64,3 +64,62 @@ t = Template(;
 )
 t("GBPlots.jl")
 ```
+
+Install slurm:
+
+```shell
+
+```
+
+Install Lmod:
+
+```shell
+wget https://sourceforge.net/projects/lmod/files/lua-5.1.4.9.tar.bz2
+tar xf lua-5.1.4.9.tar.bz2
+cd lua-5.1.4.9
+./configure --prefix=/opt/apps/lua/5.1.4.9
+make 
+sudo make install
+cd /opt/apps/lua
+sudo ln -s 5.1.4.9 lua
+sudo ln -s /opt/apps/lua/lua/bin/lua /usr/local/bin
+rm lua-5.1.4.9.tar.bz2
+sudo apt install lua5.4 liblua5.4-dev lmod -y
+sudo apt -y install tcl-dev
+
+wget https://sourceforge.net/projects/lmod/files/Lmod-8.7.tar.bz2
+tar xfvj Lmod-8.7.tar.bz2
+rm Lmod-8.7.tar.bz2
+cd Lmod-8.7/
+./configure --prefix=$HOME
+sudo make install
+export PATH=$HOME/lmod/8.7/libexec:$PATH
+source $HOME/lmod/8.7/init/bash
+export LMOD_CMD=$HOME/lmod/8.7/libexec/lmod
+
+export MODULEPATH="/etc/lmod/modules/"
+```
+
+Sample module file (`/etc/lmod/modules/applications/R.lua`):
+
+```lua
+help([[
+For detailed instructions, go to:
+   https://...
+
+]])
+whatis("Version: 4.3")
+whatis("R statistical computing environment")
+setenv("R_HOME", "/usr/bin/R")
+setenv("R_LIBS_USER", "$HOME/R/x86_64-pc-linux-gnu-library/4.3")
+prepend_path("PATH", "/usr/bin")
+
+alias("R", "/usr/bin/R")
+```
+
+Test
+
+```shell
+module avail
+module add applications/R
+```
