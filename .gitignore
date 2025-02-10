@@ -13,3 +13,4 @@ tmp/
 *.tsv
 *.csv
 *.txt
+.theme
