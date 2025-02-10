@@ -6,7 +6,7 @@ phenomes = extractphenomes(trials)
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
-submitslurmarrayjobs(input=input, analysis=assess)
+outdir = submitslurmarrayjobs(input=input, analysis=assess)
 ```
 """
 function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
@@ -56,25 +56,25 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # Define the prefix of the output including the output directory
     fname_out_prefix = input.fname_out_prefix
     # Instantiate the output directory if it does not exist
-    directory_name = if dirname(fname_out_prefix) == ""
+    outdir = if dirname(fname_out_prefix) == ""
         pwd()
     else
         dirname(fname_out_prefix)
     end
-    if !isdir(directory_name)
+    if !isdir(outdir)
         try
-            mkdir(directory_name)
+            mkdir(outdir)
         catch
-            throw(ArgumentError("Error creating the output directory: `" * directory_name * "`"))
+            throw(ArgumentError("Error creating the output directory: `" * outdir * "`"))
         end
     end
     # Create a run directory in the directory defined in the fname_out_prefix
-    run_directory_name = joinpath(directory_name, "run")
-    if !isdir(run_directory_name)
+    run_outdir = joinpath(outdir, "run")
+    if !isdir(run_outdir)
         try
-            mkdir(run_directory_name)
+            mkdir(run_outdir)
         catch
-            throw(ArgumentError("Error creating the output directory: `" * run_directory_name * "`"))
+            throw(ArgumentError("Error creating the output directory: `" * run_outdir * "`"))
         end
     end
     # Check the input files, define the vector of GBInput structs for parallel execution and save them in the run directory
@@ -82,7 +82,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     n_array_jobs = length(inputs)
     for i = 1:n_array_jobs
         # i = 1
-        writejld2(inputs[i], fname = joinpath(run_directory_name, string("GBInput-", i, ".jld2")))
+        writejld2(inputs[i], fname = joinpath(run_outdir, string("GBInput-", i, ".jld2")))
     end
     # Save the Julia run file in the run directory
     julia_script = [
@@ -96,13 +96,14 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc",
         string(
             "input = readjld2(GBInput, fname=joinpath(\"",
-            run_directory_name,
+            run_outdir,
             "\", string(\"GBInput-\", i, \".jld2\")))",
         ),
+        "display(input)",
         string("output = ", analysis, "(input)"),
         "display(output)",
     ]
-    open(joinpath(run_directory_name, "run.jl"), "w") do file
+    open(joinpath(run_outdir, "run.jl"), "w") do file
         write(file, join(julia_script, "\n") * "\n")
     end
     # Save the Slurm run file
@@ -117,7 +118,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
-        string("time julia --threads ", input.SLURM_cpus_per_task, " ", joinpath(run_directory_name, "run.jl \$SLURM_ARRAY_TASK_ID")),
+        string("time julia --threads ", input.SLURM_cpus_per_task, " ", joinpath(run_outdir, "run.jl \$SLURM_ARRAY_TASK_ID")),
     ]
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
@@ -125,16 +126,16 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
     end
-    open(joinpath(run_directory_name, "run.slurm"), "w") do file
+    open(joinpath(run_outdir, "run.slurm"), "w") do file
         write(file, join(slurm_script, "\n") * "\n")
     end
     # Submit the array of jobs
     SHELL_COMMAND = Cmd([
         "sbatch",
         string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
-        joinpath(run_directory_name, "run.slurm"),
+        joinpath(run_outdir, "run.slurm"),
     ])
     run(SHELL_COMMAND)
     # Output the name of the output directory
-    directory_name
+    outdir
 end

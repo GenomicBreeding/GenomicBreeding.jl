@@ -580,13 +580,13 @@ julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=f
 
 julia> inputs = prepareinputs(input);
 
-julia> length(inputs) == 24
+julia> length(inputs) == 30
 true
 
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function prepareinputs(input::GBInput)::Vector{GBInput}
+function GenomicBreeding.prepareinputs(input::GBInput)::Vector{GBInput}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -601,7 +601,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     p = length(unique(phenomes.populations))
     # Prepare the GBInputs
     inputs = if p > 1
-        Vector{GBInput}(undef, m * t * (p + 1))
+        Vector{GBInput}(undef, m * t * (p + 2))
     else
         Vector{GBInput}(undef, m * t * p)
     end
@@ -611,14 +611,16 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
         for trait in phenomes.traits
             # trait = phenomes.traits[1]
             populations = if p > 1
-                vcat(nothing, sort(unique(phenomes.populations)))
+                vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
             else
                 sort(unique(phenomes.populations))
             end
             for population in populations
                 # population = populations[1]
-                bulk_cv, population = if isnothing(population)
+                bulk_cv, population = if population == "BULK_CV"
                     true, nothing
+                elseif population == "ACROSS_POP_CV"
+                    false, populations[3:end]
                 else
                     false, [population]
                 end

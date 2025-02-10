@@ -5,11 +5,22 @@ function plot(input::GBInput)::String
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
     # input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
-    # # directory_name = submitslurmarrayjobs(input=input, analysis=assess)
+    # # outdir = submitslurmarrayjobs(input=input, analysis=assess)
     # Load genomes and phenomes
     genomes, phenomes = load(input)
-
-
+    # Load CVs
+    directory_name = if dirname(input.fname_out_prefix) == ""
+        pwd()
+    else
+        dirname(input.fname_out_prefix)
+    end
+    files = readdir(directory_name)
+    idx = findall(.!isnothing.(match.(Regex("jld2\$"), files)))
+    cvs = if length(idx) > 0
+        files[idx]
+    else
+        nothing
+    end
     # Plot phenotypes
     GBPlots.plot(DistributionPlots, phenomes)
     GBPlots.plot(ViolinPlots, phenomes)

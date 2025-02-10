@@ -16,7 +16,7 @@ trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_har
 phenomes = extractphenomes(trials)
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-submitslurmarrayjobs(input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=9), analysis=assess)
+outdir = submitslurmarrayjobs(input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5), analysis=assess)
 ```
 
 ### 2. Example 2: test data
