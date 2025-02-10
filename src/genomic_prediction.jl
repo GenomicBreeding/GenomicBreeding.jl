@@ -88,7 +88,7 @@ function assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
         )
         for (i, cv) in enumerate(cvs)
             # i = 1; cv = cvs[i];
-            fname = string(fname_out_prefix, f, "-", lpad(string(i), 10, "0"), ".jld2")
+            fname = string(fname_out_prefix, f, "-", hash(cv), ".jld2")
             writejld2(cv, fname = fname)
             push!(fnames_cvs, fname)
         end
