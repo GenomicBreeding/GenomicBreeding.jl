@@ -2,7 +2,7 @@
     assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
 
 Assess genomic prediction accuracy via replicated k-fold cross-validation.
-Outputs are saved as JLD2 (each containing a CV struct) and TXT (each line is a note on failed runs) files.
+Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -118,7 +118,8 @@ end
 """
     extracteffects(input::GBInput)::Vector{String}
 
-Extract allele effects by fitting the models without cross-validation
+Extract allele effects by fitting the models without cross-validation.
+The output are filenames of tab-delimited files containing the allele effects per model, trait and population.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)

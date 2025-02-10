@@ -50,6 +50,16 @@ mutable struct GBInput <: AbstractGB
     n_iter::Int64
     n_burnin::Int64
     fname_out_prefix::String
+    SLURM_job_name::String
+    SLURM_account_name::String
+    SLURM_partition_name::String
+    SLURM_nodes_per_array_job::Int64
+    SLURM_tasks_per_node::Int64
+    SLURM_cpus_per_task::Int64
+    SLURM_mem_G::Int64
+    SLURM_time_limit_dd_hhmmss::String
+    SLURM_max_array_jobs_running::Int64
+    SLURM_module_load_R_version_name::String
     verbose::Bool
     function GBInput(;
         fname_geno::String,
@@ -66,14 +76,29 @@ mutable struct GBInput <: AbstractGB
         n_iter::Int64 = 1_500,
         n_burnin::Int64 = 500,
         fname_out_prefix::String = "",
+        SLURM_job_name::String = "",
+        SLURM_account_name::String = "",
+        SLURM_partition_name::String = "",
+        SLURM_nodes_per_array_job::Int64 = 1,
+        SLURM_tasks_per_node::Int64 = 1,
+        SLURM_cpus_per_task::Int64 = 1,
+        SLURM_mem_G::Int64 = 1,
+        SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
+        SLURM_max_array_jobs_running::Int64 = 20,
+        SLURM_module_load_R_version_name::String = "R",
         verbose::Bool = true,
     )
+        date = Dates.format(now(), "yyyymmddHHMMSS")
+        randnum = Int(round(1_000 * rand()))
         fname_out_prefix = if fname_out_prefix == ""
-            date = Dates.format(now(), "yyyymmddHHMMSS")
-            randnum = Int(round(1_000 * rand()))
             string("GBOutput/output-", date, "-", randnum, "-")
         else
             fname_out_prefix
+        end
+        SLURM_job_name = if SLURM_job_name == ""
+            string("GBJob-", date, "-", randnum)
+        else
+            SLURM_job_name
         end
         new(
             fname_geno,
@@ -90,100 +115,176 @@ mutable struct GBInput <: AbstractGB
             n_iter,
             n_burnin,
             fname_out_prefix,
+            SLURM_job_name,
+            SLURM_account_name,
+            SLURM_partition_name,
+            SLURM_nodes_per_array_job,
+            SLURM_tasks_per_node,
+            SLURM_cpus_per_task,
+            SLURM_mem_G,
+            SLURM_time_limit_dd_hhmmss,
+            SLURM_max_array_jobs_running,
+            SLURM_module_load_R_version_name,
             verbose,
         )
     end
 end
 
-# """
-#     clone(x::GBInput)::GBInput
+"""
+    Base.hash(x::GBInput, h::UInt)::UInt
 
-# Clone a GBInput object
+Hash a GBInput struct using the entries, populations and loci_alleles.
+We deliberately excluded the allele_frequencies, and mask for efficiency.
 
-# ## Example
-# ```jldoctest; setup = :(using GBCore)
-# julia> input = GBInput(n=2, p=2);
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> input = GBInput(n=2, p=2);
 
-# julia> copy_input = clone(input)
-# GBInput(["", ""], ["", ""], ["", ""], Union{Missing, Float64}[missing missing; missing missing], Bool[1 1; 1 1])
-# ```
-# """
-# function clone(x::GBInput)::GBInput
-#     y::GBInput = GBInput(n = length(x.entries), p = length(x.loci_alleles))
-#     y.entries = deepcopy(x.entries)
-#     y.populations = deepcopy(x.populations)
-#     y.loci_alleles = deepcopy(x.loci_alleles)
-#     y.allele_frequencies = deepcopy(x.allele_frequencies)
-#     y.mask = deepcopy(x.mask)
-#     y
-# end
-
-
-# """
-#     Base.hash(x::GBInput, h::UInt)::UInt
-
-# Hash a GBInput struct using the entries, populations and loci_alleles.
-# We deliberately excluded the allele_frequencies, and mask for efficiency.
-
-# ## Examples
-# ```jldoctest; setup = :(using GBCore)
-# julia> input = GBInput(n=2, p=2);
-
-# julia> typeof(hash(input))
-# UInt64
-# ```
-# """
-# function Base.hash(x::GBInput, h::UInt)::UInt
-#     # hash(GBInput, hash(x.entries, hash(x.populations, hash(x.loci_alleles, hash(x.allele_frequencies, hash(x.mask, h))))))
-#     hash(GBInput, hash(x.entries, hash(x.populations, hash(x.loci_alleles, h))))
-# end
-
-
-# """
-#     Base.:(==)(x::GBInput, y::GBInput)::Bool
-
-# Equality of GBInput structs using the hash function defined for GBInput structs.
-
-# ## Examples
-# ```jldoctest; setup = :(using GBCore)
-# julia> input_1 = input = GBInput(n=2,p=4);
-
-# julia> input_2 = input = GBInput(n=2,p=4);
-
-# julia> input_3 = input = GBInput(n=1,p=2);
-
-# julia> input_1 == input_2
-# true
-
-# julia> input_1 == input_3
-# false
-# ```
-# """
-# function Base.:(==)(x::GBInput, y::GBInput)::Bool
-#     hash(x) == hash(y)
-# end
+julia> typeof(hash(input))
+UInt64
+```
+"""
+function Base.hash(x::GBInput, h::UInt)::UInt
+    # x = GBInput(fname_geno="", fname_pheno=""); h = 1.00
+    hash(x.fname_geno,
+        hash(x.fname_pheno,
+            hash(x.bulk_cv,
+                hash(x.populations,
+                    hash(x.traits,
+                        hash(x.models,
+                            hash(x.n_folds,
+                                hash(x.n_replications,
+                                    hash(x.keep_all,
+                                        hash(x.maf,
+                                            hash(x.mtv,
+                                                hash(x.n_iter,
+                                                    hash(x.n_burnin,
+                                                        hash(x.fname_out_prefix,
+                                                            hash(x.SLURM_job_name,
+                                                                hash(x.SLURM_account_name,
+                                                                    hash(x.SLURM_partition_name,
+                                                                        hash(x.SLURM_nodes_per_array_job,
+                                                                            hash(x.SLURM_tasks_per_node,
+                                                                                hash(x.SLURM_cpus_per_task,
+                                                                                    hash(x.SLURM_mem_G,
+                                                                                        hash(x.SLURM_time_limit_dd_hhmmss,
+                                                                                            hash(x.SLURM_max_array_jobs_running,
+                                                                                                hash(x.SLURM_module_load_R_version_name,
+                                                                                                        hash(x.verbose, h)
+                                                                                                )
+                                                                                            )
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+end
 
 
-# """
-#     checkdims(input::GBInput)::Bool
+"""
+    Base.:(==)(x::GBInput, y::GBInput)::Bool
 
-# Check dimension compatibility of the fields of the GBInput struct
+Equality of GBInput structs using the hash function defined for GBInput structs.
 
-# # Examples
-# ```jldoctest; setup = :(using GBCore)
-# julia> input = GBInput(n=2,p=4);
+## Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> input_1 = input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2", fname_out_prefix="test1-", SLURM_job_name="slurmjob1");
 
-# julia> checkdims(input)
-# false
+julia> input_2 = input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2", fname_out_prefix="test1-", SLURM_job_name="slurmjob1");
 
-# julia> input.entries = ["entry_1", "entry_2"];
+julia> input_3 = input = GBInput(fname_geno="geno2.jld2", fname_pheno="pheno2.jld2");
 
-# julia> input.loci_alleles = ["chr1\\t1\\tA|T\\tA", "chr1\\t2\\tC|G\\tG", "chr2\\t3\\tA|T\\tA", "chr2\\t4\\tG|T\\tG"];
+julia> input_1 == input_2
+true
 
-# julia> checkdims(input)
-# true
-# ```
-# """
+julia> input_1 == input_3
+false
+```
+"""
+function Base.:(==)(x::GBInput, y::GBInput)::Bool
+    hash(x) == hash(y)
+end
+
+"""
+    clone(x::GBInput)::GBInput
+
+Clone a GBInput object
+
+## Example
+```jldoctest; setup = :(using GenomicBreeding)
+julia> input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2");
+
+julia> copy_input = clone(input);
+
+julia> input == copy_input
+true
+```
+"""
+function clone(x::GBInput)::GBInput
+    GBInput(
+        fname_geno=deepcopy(x.fname_geno),
+        fname_pheno=deepcopy(x.fname_pheno),
+        bulk_cv=deepcopy(x.bulk_cv),
+        populations=deepcopy(x.populations),
+        traits=deepcopy(x.traits),
+        models=deepcopy(x.models),
+        n_folds=deepcopy(x.n_folds),
+        n_replications=deepcopy(x.n_replications),
+        keep_all=deepcopy(x.keep_all),
+        maf=deepcopy(x.maf),
+        mtv=deepcopy(x.mtv),
+        n_iter=deepcopy(x.n_iter),
+        n_burnin=deepcopy(x.n_burnin),
+        fname_out_prefix=deepcopy(x.fname_out_prefix),
+        SLURM_job_name=deepcopy(x.SLURM_job_name),
+        SLURM_account_name=deepcopy(x.SLURM_account_name),
+        SLURM_partition_name=deepcopy(x.SLURM_partition_name),
+        SLURM_nodes_per_array_job=deepcopy(x.SLURM_nodes_per_array_job),
+        SLURM_tasks_per_node=deepcopy(x.SLURM_tasks_per_node),
+        SLURM_cpus_per_task=deepcopy(x.SLURM_cpus_per_task),
+        SLURM_mem_G=deepcopy(x.SLURM_mem_G),
+        SLURM_time_limit_dd_hhmmss=deepcopy(x.SLURM_time_limit_dd_hhmmss),
+        SLURM_max_array_jobs_running=deepcopy(x.SLURM_max_array_jobs_running),
+        SLURM_module_load_R_version_name=deepcopy(x.SLURM_module_load_R_version_name),
+        verbose=deepcopy(x.verbose),
+    )
+end
+
+"""
+    checkdims(input::GBInput)::Bool
+
+Check dimension compatibility of the fields of the GBInput struct
+
+# Examples
+```jldoctest; setup = :(using GenomicBreeding)
+julia> input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2");
+
+julia> checkdims(input)
+true
+
+julia> input.models = nothing
+
+julia> checkdims(input)
+false
+```
+"""
 function GBCore.checkdims(input::GBInput)::Bool
     !isnothing(input.models)
 end
