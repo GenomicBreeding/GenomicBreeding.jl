@@ -42,12 +42,23 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         try
             run(pipeline(`./test-check_BGLR.sh`, stdout = out))
         catch
-            throw(ErrorException("Please specify the correct R module. Invoked the followinfg with an error: `module load " * input.SLURM_module_load_R_version_name * "`."))
+            throw(
+                ErrorException(
+                    "Please specify the correct R module. Invoked the followinfg with an error: `module load " *
+                    input.SLURM_module_load_R_version_name *
+                    "`.",
+                ),
+            )
         end
         close(out.in)
         rm("test-check_BGLR.sh")
         if String(read(out)) == "404"
-            push!(errors, string("The BGLR R package is not installed. Please install it manually first (e.g. module load R; Rscript -e 'install.packages(\"BGLR\")')"))
+            push!(
+                errors,
+                string(
+                    "The BGLR R package is not installed. Please install it manually first (e.g. module load R; Rscript -e 'install.packages(\"BGLR\")')",
+                ),
+            )
         end
     end
     if length(errors) > 0
@@ -94,11 +105,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         "end",
         "using GenomicBreeding",
         "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc",
-        string(
-            "input = readjld2(GBInput, fname=joinpath(\"",
-            run_outdir,
-            "\", string(\"GBInput-\", i, \".jld2\")))",
-        ),
+        string("input = readjld2(GBInput, fname=joinpath(\"", run_outdir, "\", string(\"GBInput-\", i, \".jld2\")))"),
         "display(input)",
         string("output = ", analysis, "(input)"),
         "display(output)",
@@ -118,7 +125,12 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
-        string("time julia --threads ", input.SLURM_cpus_per_task, " ", joinpath(run_outdir, "run.jl \$SLURM_ARRAY_TASK_ID")),
+        string(
+            "time julia --threads ",
+            input.SLURM_cpus_per_task,
+            " ",
+            joinpath(run_outdir, "run.jl \$SLURM_ARRAY_TASK_ID"),
+        ),
     ]
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]

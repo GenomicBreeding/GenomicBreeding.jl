@@ -155,54 +155,78 @@ UInt64
 """
 function Base.hash(x::GBInput, h::UInt)::UInt
     # x = GBInput(fname_geno="", fname_pheno=""); h = 1.00
-    hash(x.fname_geno,
-        hash(x.fname_pheno,
-            hash(x.bulk_cv,
-                hash(x.populations,
-                    hash(x.traits,
-                        hash(x.models,
-                            hash(x.n_folds,
-                                hash(x.n_replications,
-                                    hash(x.keep_all,
-                                        hash(x.maf,
-                                            hash(x.mtv,
-                                                hash(x.n_iter,
-                                                    hash(x.n_burnin,
-                                                        hash(x.fname_out_prefix,
-                                                            hash(x.SLURM_job_name,
-                                                                hash(x.SLURM_account_name,
-                                                                    hash(x.SLURM_partition_name,
-                                                                        hash(x.SLURM_nodes_per_array_job,
-                                                                            hash(x.SLURM_tasks_per_node,
-                                                                                hash(x.SLURM_cpus_per_task,
-                                                                                    hash(x.SLURM_mem_G,
-                                                                                        hash(x.SLURM_time_limit_dd_hhmmss,
-                                                                                            hash(x.SLURM_max_array_jobs_running,
-                                                                                                hash(x.SLURM_module_load_R_version_name,
-                                                                                                        hash(x.verbose, h)
-                                                                                                )
-                                                                                            )
-                                                                                        )
-                                                                                    )
-                                                                                )
-                                                                            )
-                                                                        )
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
+    hash(
+        x.fname_geno,
+        hash(
+            x.fname_pheno,
+            hash(
+                x.bulk_cv,
+                hash(
+                    x.populations,
+                    hash(
+                        x.traits,
+                        hash(
+                            x.models,
+                            hash(
+                                x.n_folds,
+                                hash(
+                                    x.n_replications,
+                                    hash(
+                                        x.keep_all,
+                                        hash(
+                                            x.maf,
+                                            hash(
+                                                x.mtv,
+                                                hash(
+                                                    x.n_iter,
+                                                    hash(
+                                                        x.n_burnin,
+                                                        hash(
+                                                            x.fname_out_prefix,
+                                                            hash(
+                                                                x.SLURM_job_name,
+                                                                hash(
+                                                                    x.SLURM_account_name,
+                                                                    hash(
+                                                                        x.SLURM_partition_name,
+                                                                        hash(
+                                                                            x.SLURM_nodes_per_array_job,
+                                                                            hash(
+                                                                                x.SLURM_tasks_per_node,
+                                                                                hash(
+                                                                                    x.SLURM_cpus_per_task,
+                                                                                    hash(
+                                                                                        x.SLURM_mem_G,
+                                                                                        hash(
+                                                                                            x.SLURM_time_limit_dd_hhmmss,
+                                                                                            hash(
+                                                                                                x.SLURM_max_array_jobs_running,
+                                                                                                hash(
+                                                                                                    x.SLURM_module_load_R_version_name,
+                                                                                                    hash(x.verbose, h),
+                                                                                                ),
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
     )
 end
 
@@ -248,31 +272,31 @@ true
 """
 function clone(x::GBInput)::GBInput
     GBInput(
-        fname_geno=deepcopy(x.fname_geno),
-        fname_pheno=deepcopy(x.fname_pheno),
-        bulk_cv=deepcopy(x.bulk_cv),
-        populations=deepcopy(x.populations),
-        traits=deepcopy(x.traits),
-        models=deepcopy(x.models),
-        n_folds=deepcopy(x.n_folds),
-        n_replications=deepcopy(x.n_replications),
-        keep_all=deepcopy(x.keep_all),
-        maf=deepcopy(x.maf),
-        mtv=deepcopy(x.mtv),
-        n_iter=deepcopy(x.n_iter),
-        n_burnin=deepcopy(x.n_burnin),
-        fname_out_prefix=deepcopy(x.fname_out_prefix),
-        SLURM_job_name=deepcopy(x.SLURM_job_name),
-        SLURM_account_name=deepcopy(x.SLURM_account_name),
-        SLURM_partition_name=deepcopy(x.SLURM_partition_name),
-        SLURM_nodes_per_array_job=deepcopy(x.SLURM_nodes_per_array_job),
-        SLURM_tasks_per_node=deepcopy(x.SLURM_tasks_per_node),
-        SLURM_cpus_per_task=deepcopy(x.SLURM_cpus_per_task),
-        SLURM_mem_G=deepcopy(x.SLURM_mem_G),
-        SLURM_time_limit_dd_hhmmss=deepcopy(x.SLURM_time_limit_dd_hhmmss),
-        SLURM_max_array_jobs_running=deepcopy(x.SLURM_max_array_jobs_running),
-        SLURM_module_load_R_version_name=deepcopy(x.SLURM_module_load_R_version_name),
-        verbose=deepcopy(x.verbose),
+        fname_geno = deepcopy(x.fname_geno),
+        fname_pheno = deepcopy(x.fname_pheno),
+        bulk_cv = deepcopy(x.bulk_cv),
+        populations = deepcopy(x.populations),
+        traits = deepcopy(x.traits),
+        models = deepcopy(x.models),
+        n_folds = deepcopy(x.n_folds),
+        n_replications = deepcopy(x.n_replications),
+        keep_all = deepcopy(x.keep_all),
+        maf = deepcopy(x.maf),
+        mtv = deepcopy(x.mtv),
+        n_iter = deepcopy(x.n_iter),
+        n_burnin = deepcopy(x.n_burnin),
+        fname_out_prefix = deepcopy(x.fname_out_prefix),
+        SLURM_job_name = deepcopy(x.SLURM_job_name),
+        SLURM_account_name = deepcopy(x.SLURM_account_name),
+        SLURM_partition_name = deepcopy(x.SLURM_partition_name),
+        SLURM_nodes_per_array_job = deepcopy(x.SLURM_nodes_per_array_job),
+        SLURM_tasks_per_node = deepcopy(x.SLURM_tasks_per_node),
+        SLURM_cpus_per_task = deepcopy(x.SLURM_cpus_per_task),
+        SLURM_mem_G = deepcopy(x.SLURM_mem_G),
+        SLURM_time_limit_dd_hhmmss = deepcopy(x.SLURM_time_limit_dd_hhmmss),
+        SLURM_max_array_jobs_running = deepcopy(x.SLURM_max_array_jobs_running),
+        SLURM_module_load_R_version_name = deepcopy(x.SLURM_module_load_R_version_name),
+        verbose = deepcopy(x.verbose),
     )
 end
 
@@ -586,7 +610,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function GenomicBreeding.prepareinputs(input::GBInput)::Vector{GBInput}
+function prepareinputs(input::GBInput)::Vector{GBInput}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
