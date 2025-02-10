@@ -32,7 +32,16 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `n_iter`: number of Bayesian model fitting MCMC/HMC iteration (Default = 1_500)
 - `fname_out_prefix`: prefix of the output files which may include directory names (Default = "" which translates to `./GBOuput/output-<yyyymmddHHMMSS>-<3_digit_random_number>-`)
 - `n_burnin`: number of initial Bayesian model fitting MCMC/HMC iterations to be excluded from the posterior distribution (Default = 500)
-
+- `SLURM_job_name`: name of the Slurm job array (Default = "")
+- `SLURM_account_name`: Slurm account name (Default = "")
+- `SLURM_partition_name`: Slurm paritition to use (Default = "")
+- `SLURM_nodes_per_array_job`: number of nodes per array job (Default = 1)
+- `SLURM_tasks_per_node`: number of tasks per node (Default = 1)
+- `SLURM_cpus_per_task`: number of CPU cores per task (Default = 1)
+- `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1)
+- `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
+- `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
+- `SLURM_module_load_R_version_name`: name of the R statistical language module name and version to be used to call R::BGLR (Default = "R")
 - `verbose`: show messages (Default = true)
 """
 mutable struct GBInput <: AbstractGB
@@ -138,7 +147,7 @@ We deliberately excluded the allele_frequencies, and mask for efficiency.
 
 ## Examples
 ```jldoctest; setup = :(using GenomicBreeding)
-julia> input = GBInput(n=2, p=2);
+julia> input = GBInput(fname_geno="", fname_pheno="");
 
 julia> typeof(hash(input))
 UInt64
