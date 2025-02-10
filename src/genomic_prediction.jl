@@ -86,8 +86,8 @@ function assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
             n_folds = n_folds,
             verbose = verbose,
         )
-        for (i, cv) in enumerate(cvs)
-            # i = 1; cv = cvs[i];
+        for cv in cvs
+            # cv = cvs[1];
             fname = string(fname_out_prefix, f, "-", hash(cv), ".jld2")
             writejld2(cv, fname = fname)
             push!(fnames_cvs, fname)
