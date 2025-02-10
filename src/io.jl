@@ -48,8 +48,8 @@ mutable struct GBInput <: AbstractGB
     fname_geno::String
     fname_pheno::String
     bulk_cv::Bool
-    populations::Union{Nothing,String,Vector{String}}
-    traits::Union{Nothing,String,Vector{String}}
+    populations::Union{Nothing,Vector{String}}
+    traits::Union{Nothing,Vector{String}}
     models::Any
     n_folds::Int64
     n_replications::Int64
@@ -74,8 +74,8 @@ mutable struct GBInput <: AbstractGB
         fname_geno::String,
         fname_pheno::String,
         bulk_cv::Bool = false,
-        populations::Union{Nothing,String,Vector{String}} = nothing,
-        traits::Union{Nothing,String,Vector{String}} = nothing,
+        populations::Union{Nothing,Vector{String}} = nothing,
+        traits::Union{Nothing,Vector{String}} = nothing,
         models::Any = [ridge, bayesa],
         n_folds::Int64 = 5,
         n_replications::Int64 = 5,
@@ -620,15 +620,15 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 bulk_cv, population = if isnothing(population)
                     true, nothing
                 else
-                    false, population
+                    false, [population]
                 end
                 inputs[i] = GBInput(
                     fname_geno = input.fname_geno,
                     fname_pheno = input.fname_pheno,
                     bulk_cv = bulk_cv,
                     populations = population,
-                    traits = trait,
-                    models = model,
+                    traits = [trait],
+                    models = [model],
                     n_folds = input.n_folds,
                     n_replications = input.n_replications,
                     keep_all = input.keep_all,

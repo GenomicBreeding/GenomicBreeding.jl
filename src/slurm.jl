@@ -5,7 +5,8 @@ trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_har
 phenomes = extractphenomes(trials)
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-submitslurmarrayjobs(input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=9), analysis=assess)
+input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
+submitslurmarrayjobs(input=input, analysis=assess)
 ```
 """
 function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
@@ -98,7 +99,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
             run_directory_name,
             "\", string(\"GBInput-\", i, \".jld2\")))",
         ),
-        "output = analysis(input)",
+        string("output = ", analysis, "(input)"),
         "display(output)",
     ]
     open(joinpath(run_directory_name, "run.jl"), "w") do file
@@ -116,7 +117,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
-        string("time julia ", joinpath(run_directory_name, "run.jl \$SLURM_ARRAY_TASK_ID")),
+        string("time julia --threads ", input.SLURM_cpus_per_task, " ", joinpath(run_directory_name, "run.jl \$SLURM_ARRAY_TASK_ID")),
     ]
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
@@ -134,6 +135,6 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         joinpath(run_directory_name, "run.slurm"),
     ])
     run(SHELL_COMMAND)
-    # Output
-    nothing
+    # Output the name of the output directory
+    directory_name
 end

@@ -75,15 +75,6 @@ function assess(input::GBInput)::Tuple{Vector{String},Vector{String}}
               "`."
         fname_out_prefix = joinpath(directory_name, prefix_name)
     end
-    if sum(.!isnothing.(match.(Regex(prefix_name), readdir(directory_name)))) > 0
-        throw(
-            ErrorException(
-                "Files with the same prefix (`" *
-                fname_out_prefix *
-                "`) please remove/rename the files or modify `fname_out_prefix`.",
-            ),
-        )
-    end
     # Cross-validate
     for f in cv_functions
         # f = cv_functions[1]
