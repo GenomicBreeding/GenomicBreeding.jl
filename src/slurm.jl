@@ -8,7 +8,7 @@ fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("t
 submitslurmarrayjobs(input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=9), analysis=assess)
 ```
 """
-function submitslurmarrayjobs(; input::GBInput, analysis::Function)::Nothing
+function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -55,8 +55,12 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::Nothing
     # Define the prefix of the output including the output directory
     fname_out_prefix = input.fname_out_prefix
     # Instantiate the output directory if it does not exist
-    directory_name = dirname(fname_out_prefix)
-    if !isdir(directory_name) && (directory_name != "")
+    directory_name = if dirname(fname_out_prefix) == ""
+        pwd()
+    else
+        dirname(fname_out_prefix)
+    end
+    if !isdir(directory_name)
         try
             mkdir(directory_name)
         catch
