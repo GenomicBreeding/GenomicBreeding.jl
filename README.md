@@ -11,8 +11,12 @@
 Here's a simple example using simulated data:
 
 ```julia
+# It is always a good idea to update all the packages
+using Pkg; Pkg.update()
+# Load GenomicBreeding
 using GenomicBreeding
-import GenomicBreeding: plot
+# Load plotting and GP model functions
+import GenomicBreeding: plot, lasso, bayesa
 # Simulate genotype and phenotype data
 genomes = simulategenomes(n=300, l=1_000, verbose=true)
 trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
@@ -22,14 +26,17 @@ fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
 # Setup the input struct
 input = GBInput(
     fname_geno=fname_geno, 
-    fname_pheno=fname_pheno, 
+    fname_pheno=fname_pheno,
+    models = [lasso, bayesa],
     n_folds=2, 
     n_replications=2, 
-    SLURM_cpus_per_task=6, 
+    SLURM_cpus_per_task=2, 
     SLURM_mem_G=5, 
     verbose=true
 )
-# Preliminary look at the genotype and phenotype data:
+# Input struct documentation
+@doc GBInput
+# Preliminary look at the genotype and phenotype data
 outdir_plots = plot(input=input, format="png", plot_size=(700, 500))
 # Perform replicated k-fold cross-validation
 outdir = submitslurmarrayjobs(input=input, analysis=assess)
