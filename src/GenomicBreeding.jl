@@ -30,9 +30,8 @@ export validate, cvmultithread!, cvbulk
 export cvperpopulation, cvpairwisepopulation, cvleaveonepopulationout
 
 using GBPlots
-# export PlotsGB, DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots
-# export checkdims, labeltofname, saveplots
-# export plotstatic, plotinteractive2d
+export PlotsGB, DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots
+export checkdims, labeltofname, saveplots
 
 using StatsBase, DataFrames, Dates
 using ProgressMeter, UnicodePlots
@@ -41,10 +40,12 @@ using ProgressMeter, UnicodePlots
 include("io.jl")
 include("genomic_prediction.jl")
 include("slurm.jl")
+include("plot.jl")
 
 export GBInput, load, prepareinputs
 export assess, extracteffects
 export submitslurmarrayjobs
+export plot
 
 
 

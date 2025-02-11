@@ -30,8 +30,8 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `maf`: minimum allele frequency (Default = 0.05)
 - `mtv`: minimum trait variance (Default = 1e-7)
 - `n_iter`: number of Bayesian model fitting MCMC/HMC iteration (Default = 1_500)
-- `fname_out_prefix`: prefix of the output files which may include directory names (Default = "" which translates to `./GBOuput/output-<yyyymmddHHMMSS>-<3_digit_random_number>-`)
 - `n_burnin`: number of initial Bayesian model fitting MCMC/HMC iterations to be excluded from the posterior distribution (Default = 500)
+- `fname_out_prefix`: prefix of the output files which may include directory names (Default = "" which translates to `./GBOuput/output-<yyyymmddHHMMSS>-<3_digit_random_number>-`)
 - `SLURM_job_name`: name of the Slurm job array (Default = "")
 - `SLURM_account_name`: Slurm account name (Default = "")
 - `SLURM_partition_name`: Slurm paritition to use (Default = "")
@@ -142,7 +142,7 @@ end
 """
     Base.hash(x::GBInput, h::UInt)::UInt
 
-Hash a GBInput struct using the entries, populations and loci_alleles.
+Hash a GBInput struct using all its fields.
 We deliberately excluded the allele_frequencies, and mask for efficiency.
 
 ## Examples

@@ -1,12 +1,37 @@
-function plot(input::GBInput)::String
-    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
-    # phenomes = extractphenomes(trials)
-    # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
-    # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-    # # fname_geno = "test-geno.tsv"; fname_pheno = "test-pheno.tsv"; outdir = "GBOutput"
+"""
+    plot(input::GBInput; format::String="svg")::String
+
+Plot genomes, phenomes, and CVs, if present.
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+
+julia> outdir = GenomicBreeding.plot(input=input, format="png", plot_size = (700, 525))
+"GBOutput/plots"
+```
+"""
+function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,Int64} = (600, 450))::String
+    # # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+    # # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # # phenomes = extractphenomes(trials)
+    # # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    # # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+    # # input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
+    # fname_geno = "test-geno.tsv"; fname_pheno = "test-pheno.tsv"; outdir = "GBOutput"
     # input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
-    # # input.fname_out_prefix = replace(input.fname_out_prefix, dirname(input.fname_out_prefix) => outdir)
+    # input.fname_out_prefix = replace(input.fname_out_prefix, dirname(input.fname_out_prefix) => outdir)
+    # format = "svg"
     # Load genomes and phenomes
     genomes, phenomes = load(input)
     # Load CVs
@@ -15,39 +40,84 @@ function plot(input::GBInput)::String
     else
         dirname(input.fname_out_prefix)
     end
-    files = readdir(directory_name)
-    idx = findall(.!isnothing.(match.(Regex("jld2\$"), files)))
-    fnames_cvs = if length(idx) > 0
-        joinpath.(directory_name, files[idx])
+    fnames_cvs = if isdir(directory_name)
+        files = readdir(directory_name)
+        idx = findall(.!isnothing.(match.(Regex("jld2\$"), files)))
+        fnames_cvs = if length(idx) > 0
+            joinpath.(directory_name, files[idx])
+        else
+            nothing
+        end
+        fnames_cvs
     else
+        try
+            mkdir(directory_name)
+        catch
+            throw(ArgumentError("Error creating the output directory: `" * directory_name * "`"))
+        end
         nothing
     end
-    
-    # Plot phenotypes
-    distribution_plots = GBPlots.plot(DistributionPlots, phenomes)
-    violin_plots = GBPlots.plot(ViolinPlots, phenomes)
-    corheat_plots = GBPlots.plot(CorHeatPlots, phenomes)
-    tree_plots = GBPlots.plot(TreePlots, phenomes)
-    
-    
-    # Plot genotypes
-    
-    
-    # Plot CVs, if present
-    bar_plots = if !isnothing(fnames_cvs)
+    # Prepare the main directory for the output plots
+    plot_outdir = joinpath(directory_name, "plots")
+    if !isdir(plot_outdir)
+        try
+            mkdir(plot_outdir)
+        catch
+            throw(ArgumentError("Error creating the output directory: `" * plot_outdir * "`"))
+        end
+    end
+    for subdir_name in ["genomes", "phenomes", "cvs"]
+        plot_outdir_subdir = joinpath(plot_outdir, subdir_name)
+        if !isdir(plot_outdir_subdir)
+            try
+                mkdir(plot_outdir_subdir)
+            catch
+                throw(ArgumentError("Error creating the output directory: `" * plot_outdir_subdir * "`"))
+            end
+        end
+    end
+    # Output plot filenames
+    fnames::Vector{String} = []
+    # Plot types for Genomes and Phenomes
+    plot_types = [DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots, PCBiPlots]
+    # Genomes
+    for plot_type in plot_types
+        # plot_type = PCBiPlots
+        if input.verbose
+            println(string("Genomes: ", plot_type))
+        end
+        plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
+        append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "genomes", string(plot_type))))
+    end
+    # Phenomes
+    for plot_type in plot_types
+        if input.verbose
+            println(string("Phenomes: ", plot_type))
+        end
+        plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
+        append!(
+            fnames,
+            saveplots(plots, format = format, prefix = joinpath(plot_outdir, "phenomes", string(plot_type))),
+        )
+    end
+    # CVs
+    if !isnothing(fnames_cvs)
         cvs = Vector{CV}(undef, length(fnames_cvs))
         for (i, fname) in enumerate(fnames_cvs)
             # i = 1; fname = fnames_cvs[i];
-            cvs[i] = readjld2(CV, fname=fname)
+            cvs[i] = readjld2(CV, fname = fname)
         end
-        GBPlots.plot(BarPlots, cvs)
-    else
-        nothing
+        for plot_type in [BarPlots, BoxPlots]
+            if input.verbose
+                println(string("Vector{CV}: ", plot_type))
+            end
+            plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
+            append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "cvs", string(plot_type))))
+        end
     end
-    bar_plots.plots[1]
-
-    # Save plots
-
-
-
+    # Output directory
+    if input.verbose
+        println(string("Please find output plots in: `", plot_outdir, "`"))
+    end
+    plot_outdir
 end
