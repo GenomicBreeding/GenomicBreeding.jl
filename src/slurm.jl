@@ -132,9 +132,9 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # Save the Slurm run file
     slurm_script = [
         "#!/bin/bash",
-        string("#SBATCH --job-name=", input.SLURM_job_name),
-        string("#SBATCH --account=", input.SLURM_account_name),
-        string("#SBATCH --partition=", input.SLURM_partition_name),
+        string("#SBATCH --job-name='", input.SLURM_job_name, "'"),
+        string("#SBATCH --account='", input.SLURM_account_name, "'"),
+        string("#SBATCH --partition='", input.SLURM_partition_name, "'"),
         string("#SBATCH --nodes=", input.SLURM_nodes_per_array_job),
         string("#SBATCH --ntasks=", input.SLURM_tasks_per_node),
         string("#SBATCH --cpus-per-task=", input.SLURM_cpus_per_task),

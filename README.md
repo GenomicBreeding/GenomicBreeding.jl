@@ -23,6 +23,8 @@ trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1
 phenomes = extractphenomes(trials)
 fname_geno = writedelimited(genomes, fname="test-geno.tsv")
 fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
+# Input struct documentation
+@doc GBInput
 # Setup the input struct
 input = GBInput(
     fname_geno=fname_geno, 
@@ -30,12 +32,15 @@ input = GBInput(
     models = [lasso, bayesa],
     n_folds=2, 
     n_replications=2, 
+    SLURM_job_name="testGB",
+    SLURM_account_name="dbiopast1",
     SLURM_cpus_per_task=2, 
     SLURM_mem_G=5, 
+    SLURM_time_limit_dd_hhmmss="00-00:45:00",
+    SLURM_max_array_jobs_running=2,
+    SLURM_module_load_R_version_name="R",
     verbose=true
 )
-# Input struct documentation
-@doc GBInput
 # Preliminary look at the genotype and phenotype data
 outdir_plots = plot(input=input, format="png", plot_size=(700, 500))
 # Perform replicated k-fold cross-validation
