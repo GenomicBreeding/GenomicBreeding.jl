@@ -13,14 +13,30 @@ Here's a simple example using simulated data:
 ```julia
 using GenomicBreeding
 import GenomicBreeding: plot
-genomes = simulategenomes(n=300, l=1_000, verbose=false)
-trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+# Simulate genotype and phenotype data
+genomes = simulategenomes(n=300, l=1_000, verbose=true)
+trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
 phenomes = extractphenomes(trials)
 fname_geno = writedelimited(genomes, fname="test-geno.tsv")
 fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
-input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
-outdir = submitslurmarrayjobs(input=input, analysis=assess)
+# Setup the input struct
+input = GBInput(
+    fname_geno=fname_geno, 
+    fname_pheno=fname_pheno, 
+    n_folds=2, 
+    n_replications=2, 
+    SLURM_cpus_per_task=6, 
+    SLURM_mem_G=5, 
+    verbose=true
+)
+# Preliminary look at the genotype and phenotype data:
 outdir_plots = plot(input=input, format="png", plot_size=(700, 500))
+# Perform replicated k-fold cross-validation
+outdir = submitslurmarrayjobs(input=input, analysis=assess)
+# Monitor the Slurm jobs
+run(`squeue -u $USER`)
+# Once the array jobs have finishes or at least a couple of jobs have finished, run below and rerun as you wish to update the plots:
+plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
 ```
 
 ### 2. Example 2: test data

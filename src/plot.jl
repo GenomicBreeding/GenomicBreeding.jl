@@ -1,5 +1,11 @@
 """
-    plot(input::GBInput; format::String="svg")::String
+    plot(;
+        input::GBInput,
+        skip_genomes::Bool = false,
+        skip_phenomes::Bool = false,
+        format::String = "svg",
+        plot_size::Tuple{Int64,Int64} = (600, 450),
+    )::String
 
 Plot genomes, phenomes, and CVs, if present.
 
@@ -11,17 +17,27 @@ julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1
 
 julia> phenomes = extractphenomes(trials);
 
-julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+julia> fname_geno = writedelimited(genomes, fname="test-geno.tsv");
 
-julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+julia> fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv");
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> outdir = GenomicBreeding.plot(input=input, format="png", plot_size = (700, 525))
+julia> GenomicBreeding.plot(input=input, format="png", plot_size = (700, 525))
+"GBOutput/plots"
+
+julia> GenomicBreeding.plot(input=input, format="png", plot_size = (700, 525), overwrite=true, skip_genomes=true)
 "GBOutput/plots"
 ```
 """
-function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,Int64} = (600, 450))::String
+function plot(;
+    input::GBInput,
+    skip_genomes::Bool = false,
+    skip_phenomes::Bool = false,
+    format::String = "svg",
+    plot_size::Tuple{Int64,Int64} = (600, 450),
+    overwrite::Bool = false,
+)::String
     # # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # # phenomes = extractphenomes(trials)
@@ -33,7 +49,11 @@ function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,I
     # input.fname_out_prefix = replace(input.fname_out_prefix, dirname(input.fname_out_prefix) => outdir)
     # format = "svg"
     # Load genomes and phenomes
-    genomes, phenomes = load(input)
+    genomes, phenomes = if !skip_genomes || !skip_phenomes
+        load(input)
+    else
+        nothing, nothing
+    end
     # Load CVs
     directory_name = if dirname(input.fname_out_prefix) == ""
         pwd()
@@ -66,7 +86,17 @@ function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,I
             throw(ArgumentError("Error creating the output directory: `" * plot_outdir * "`"))
         end
     end
-    for subdir_name in ["genomes", "phenomes", "cvs"]
+    subdir_names = ["genomes", "phenomes", "cvs"]
+    if skip_genomes
+        subdir_names = subdir_names[subdir_names.!="genomes"]
+    end
+    if skip_phenomes
+        subdir_names = subdir_names[subdir_names.!="phenomes"]
+    end
+    if isnothing(fnames_cvs)
+        subdir_names = subdir_names[subdir_names.!="cvs"]
+    end
+    for subdir_name in subdir_names
         plot_outdir_subdir = joinpath(plot_outdir, subdir_name)
         if !isdir(plot_outdir_subdir)
             try
@@ -87,7 +117,7 @@ function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,I
             println(string("Genomes: ", plot_type))
         end
         plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
-        append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "genomes", string(plot_type))))
+        append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "genomes", string(plot_type)), overwrite=overwrite))
     end
     # Phenomes
     for plot_type in plot_types
@@ -97,7 +127,7 @@ function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,I
         plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
         append!(
             fnames,
-            saveplots(plots, format = format, prefix = joinpath(plot_outdir, "phenomes", string(plot_type))),
+            saveplots(plots, format = format, prefix = joinpath(plot_outdir, "phenomes", string(plot_type)), overwrite=overwrite),
         )
     end
     # CVs
@@ -118,6 +148,7 @@ function plot(; input::GBInput, format::String = "svg", plot_size::Tuple{Int64,I
     # Output directory
     if input.verbose
         println(string("Please find output plots in: `", plot_outdir, "`"))
+        println(fnames)
     end
     plot_outdir
 end
