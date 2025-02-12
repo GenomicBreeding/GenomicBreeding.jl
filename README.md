@@ -19,6 +19,7 @@ using GenomicBreeding
 import GenomicBreeding: plot, lasso, bayesa
 # Simulate genotype and phenotype data
 genomes = simulategenomes(n=300, l=1_000, verbose=true)
+genomes.populations[1:100] .= "pop1"; genomes.populations[101:200] .= "pop2"; genomes.populations[201:300] .= "pop3" # simulate multiple populations
 trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
 phenomes = extractphenomes(trials)
 fname_geno = writedelimited(genomes, fname="test-geno.tsv")
@@ -48,6 +49,8 @@ outdir = submitslurmarrayjobs(input=input, analysis=assess)
 # Monitor the Slurm jobs
 run(`sh -c 'squeue -u $USER'`)
 run(`sh -c 'cat slurm-*_*.out'`)
+run(`sh -c 'tail slurm-*_*.out'`)
+readdir(outdir)
 # Once the array jobs have finishes or at least a couple of jobs have finished, run below and rerun as you wish to update the plots:
 plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
 ```

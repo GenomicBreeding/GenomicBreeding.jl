@@ -68,7 +68,6 @@ mutable struct GBInput <: AbstractGB
     SLURM_mem_G::Int64
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
-    SLURM_module_load_Julia_version_name::String
     SLURM_module_load_R_version_name::String
     verbose::Bool
     function GBInput(;
@@ -95,7 +94,6 @@ mutable struct GBInput <: AbstractGB
         SLURM_mem_G::Int64 = 1,
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
-        SLURM_module_load_Julia_version_name::String = "Julia",
         SLURM_module_load_R_version_name::String = "R",
         verbose::Bool = true,
     )
@@ -135,7 +133,6 @@ mutable struct GBInput <: AbstractGB
             SLURM_mem_G,
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
-            SLURM_module_load_Julia_version_name,
             SLURM_module_load_R_version_name,
             verbose,
         )

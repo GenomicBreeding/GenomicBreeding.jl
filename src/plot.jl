@@ -97,6 +97,7 @@ function plot(;
         subdir_names = subdir_names[subdir_names.!="cvs"]
     end
     for subdir_name in subdir_names
+        # subdir_name = subdir_names[1]
         plot_outdir_subdir = joinpath(plot_outdir, subdir_name)
         if !isdir(plot_outdir_subdir)
             try
@@ -111,37 +112,41 @@ function plot(;
     # Plot types for Genomes and Phenomes
     plot_types = [DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots, PCBiPlots]
     # Genomes
-    for plot_type in plot_types
-        # plot_type = PCBiPlots
-        if input.verbose
-            println(string("Genomes: ", plot_type))
+    if !skip_genomes
+        for plot_type in plot_types
+            # plot_type = PCBiPlots
+            if input.verbose
+                println(string("Genomes: ", plot_type))
+            end
+            plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
+            append!(
+                fnames,
+                saveplots(
+                    plots,
+                    format = format,
+                    prefix = joinpath(plot_outdir, "genomes", string(plot_type)),
+                    overwrite = overwrite,
+                ),
+            )
         end
-        plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
-        append!(
-            fnames,
-            saveplots(
-                plots,
-                format = format,
-                prefix = joinpath(plot_outdir, "genomes", string(plot_type)),
-                overwrite = overwrite,
-            ),
-        )
     end
     # Phenomes
-    for plot_type in plot_types
-        if input.verbose
-            println(string("Phenomes: ", plot_type))
+    if !skip_phenomes
+        for plot_type in plot_types
+            if input.verbose
+                println(string("Phenomes: ", plot_type))
+            end
+            plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
+            append!(
+                fnames,
+                saveplots(
+                    plots,
+                    format = format,
+                    prefix = joinpath(plot_outdir, "phenomes", string(plot_type)),
+                    overwrite = overwrite,
+                ),
+            )
         end
-        plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
-        append!(
-            fnames,
-            saveplots(
-                plots,
-                format = format,
-                prefix = joinpath(plot_outdir, "phenomes", string(plot_type)),
-                overwrite = overwrite,
-            ),
-        )
     end
     # CVs
     if !isnothing(fnames_cvs)
