@@ -141,6 +141,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
+        "LD_LIBRARY_PATH=\"\"",
         string(
             "time julia --threads ",
             input.SLURM_cpus_per_task,

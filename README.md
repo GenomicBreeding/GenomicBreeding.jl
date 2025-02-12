@@ -37,7 +37,7 @@ input = GBInput(
     SLURM_cpus_per_task=2, 
     SLURM_mem_G=5, 
     SLURM_time_limit_dd_hhmmss="00-00:15:00",
-    SLURM_max_array_jobs_running=2,
+    SLURM_max_array_jobs_running=10,
     SLURM_module_load_R_version_name="R",
     verbose=true
 )
@@ -46,7 +46,8 @@ outdir_plots = plot(input=input, format="png", plot_size=(700, 500))
 # Perform replicated k-fold cross-validation
 outdir = submitslurmarrayjobs(input=input, analysis=assess)
 # Monitor the Slurm jobs
-run(`squeue -u $USER`)
+run(`sh -c 'squeue -u $USER'`)
+run(`sh -c 'cat slurm-*_*.out'`)
 # Once the array jobs have finishes or at least a couple of jobs have finished, run below and rerun as you wish to update the plots:
 plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
 ```
