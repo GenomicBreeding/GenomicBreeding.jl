@@ -150,6 +150,14 @@ function plot(;
     end
     # CVs
     if !isnothing(fnames_cvs)
+        if overwrite
+            try 
+                rm(joinpath(plot_outdir, "cvs"), force=true, recursive=true)
+                mkdir(joinpath(plot_outdir, "cvs"))
+            catch
+                throw(ArgumentError("Error overwriting the output directory: `" * joinpath(plot_outdir, "cvs") * "`"))
+            end
+        end
         cvs = Vector{CV}(undef, length(fnames_cvs))
         for (i, fname) in enumerate(fnames_cvs)
             # i = 1; fname = fnames_cvs[i];
@@ -160,13 +168,17 @@ function plot(;
                 println(string("Vector{CV}: ", plot_type))
             end
             plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
-            append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "cvs", string(plot_type))))
+            append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "cvs", string(plot_type)), overwrite = overwrite))
         end
     end
     # Output directory
     if input.verbose
-        println(string("Please find output plots in: `", plot_outdir, "`"))
-        println(fnames)
+        if length(fnames) > 0
+            println(string("Please find output plots in: `", plot_outdir, "`"))
+            println(fnames)
+        else
+            println(string("No plots have been generated. The Slurm jobs may still be running."))
+        end
     end
     plot_outdir
 end

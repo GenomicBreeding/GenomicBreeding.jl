@@ -4,6 +4,40 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://GenomicBreeding.github.io/GenomicBreeding.jl/dev/)
 [![Build Status](https://github.com/GenomicBreeding/GenomicBreeding.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/GenomicBreeding/GenomicBreeding.jl/actions)
 
+## Installation
+
+We designed [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) to work on an HPC running Linux (the various components, i.e. [GBCore.jl](https://github.com/GenomicBreeding/GBCore.jl), [GBIO.jl](https://github.com/GenomicBreeding/GBIO.jl), [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl), and [GBPlots.jl](https://github.com/GenomicBreeding/GBPlots.jl) work on a single Linux PC too).
+
+Currently, we require that you install Julia on your home directory in you HPC cluster via:
+
+```shell
+curl -fsSL https://install.julialang.org | sh
+type -a julia
+```
+
+Install the [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) library in Julia:
+
+```julia
+using Pkg
+Pkg.add("https://github.com/GenomicBreeding/GenomicBreeding.jl")
+```
+
+Feel free to install the [GenomicBreeding.jl components](https://github.com/GenomicBreeding) as well as various other useful libraries:
+
+```julia
+using Pkg
+GB_components = [
+    "https://github.com/GenomicBreeding/GBCore.jl",
+    "https://github.com/GenomicBreeding/GBIO.jl",
+    "https://github.com/GenomicBreeding/GBModels.jl",
+    "https://github.com/GenomicBreeding/GBPlots.jl",
+]
+for P in GB_components
+    Pkg.add(url=P)
+end
+Pkg.add(["StatsBase", "MixedModels", "MultivariateStats", "UnicodePlots", "ColorSchemes", "CairoMakie"])
+```
+
 ## Quickstart
 
 ### 1. Example 1: simulated data
@@ -43,13 +77,16 @@ input = GBInput(
     verbose=true
 )
 # Preliminary look at the genotype and phenotype data
-outdir_plots = plot(input=input, format="png", plot_size=(700, 500))
+plot(input=input, format="png", plot_size=(700, 500))
 # Perform replicated k-fold cross-validation
 outdir = submitslurmarrayjobs(input=input, analysis=assess)
 # Monitor the Slurm jobs
 run(`sh -c 'squeue -u $USER'`)
+run(`sh -c 'ls -lhtr slurm-*_*.out'`)
 run(`sh -c 'cat slurm-*_*.out'`)
 run(`sh -c 'tail slurm-*_*.out'`)
+run(`sh -c 'grep -i "err" slurm-*_*.out'`)
+run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`)
 readdir(outdir)
 # Once the array jobs have finishes or at least a couple of jobs have finished, run below and rerun as you wish to update the plots:
 plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
