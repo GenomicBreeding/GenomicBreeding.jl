@@ -114,11 +114,11 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # Save the Julia run file in the run directory
     julia_script = [
         "i = ARGS[1]",
-        "try",
-        "\tusing Pkg; Pkg.update()",
-        "catch",
-        "\tnothing",
-        "end",
+        # "try",
+        # "\tusing Pkg; Pkg.update()",
+        # "catch",
+        # "\tnothing",
+        # "end",
         "using GenomicBreeding",
         "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc",
         string("input = readjld2(GBInput, fname=joinpath(\"", run_outdir, "\", string(\"GBInput-\", i, \".jld2\")))"),
@@ -167,3 +167,6 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # Output the name of the output directory
     outdir
 end
+
+# using Libdl
+# filter!(contains("curl"), dllist())

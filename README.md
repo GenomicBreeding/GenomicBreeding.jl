@@ -11,7 +11,7 @@
 Here's a simple example using simulated data:
 
 ```julia
-# It is always a good idea to update all the packages
+# It is always a good idea to keep all your packages updated
 using Pkg; Pkg.update()
 # Load GenomicBreeding
 using GenomicBreeding
