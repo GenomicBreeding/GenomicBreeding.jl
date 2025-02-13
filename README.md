@@ -79,6 +79,7 @@ input = GBInput(
 # Preliminary look at the genotype and phenotype data
 plot(input=input, format="png", plot_size=(700, 500))
 # Perform replicated k-fold cross-validation
+# Note that here you will be prompted to enter YES to proceed.
 outdir = submitslurmarrayjobs(input=input, analysis=assess)
 # Monitor the Slurm jobs
 run(`sh -c 'squeue -u $USER'`)

@@ -3,16 +3,28 @@
         fname_geno::String
         fname_pheno::String
         bulk_cv::Bool
-        populations::Union{Nothing, String, Vector{String}}
-        traits::Union{Nothing, String, Vector{String}}
+        populations::Union{Nothing,Vector{String}}
+        traits::Union{Nothing,Vector{String}}
         models::Any
         n_folds::Int64
         n_replications::Int64
+        keep_all::Bool
         maf::Float64
         mtv::Float64
-        n_iter::Int64,
-        n_burnin::Int64,
-        fname_out_prefix::String,
+        n_iter::Int64
+        n_burnin::Int64
+        fname_out_prefix::String
+        SLURM_job_name::String
+        SLURM_account_name::String
+        SLURM_partition_name::String
+        SLURM_nodes_per_array_job::Int64
+        SLURM_tasks_per_node::Int64
+        SLURM_cpus_per_task::Int64
+        SLURM_mem_G::Int64
+        SLURM_time_limit_dd_hhmmss::String
+        SLURM_max_array_jobs_running::Int64
+        SLURM_module_load_R_version_name::String
+        SLURM_module_load_BLAS_version_name::String
         verbose::Bool
     end
 
@@ -41,7 +53,8 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1)
 - `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
 - `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
-- `SLURM_module_load_R_version_name`: name of the R statistical language module name and version to be used to call R::BGLR (Default = "R")
+- `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "R")
+- `SLURM_module_load_BLAS_version_name`: name of the BLAS module and version to be used to use with R::BGLR. This is non-critical as there is usually a system default to fallback to. (Default = "")
 - `verbose`: show messages (Default = true)
 """
 mutable struct GBInput <: AbstractGB
@@ -69,6 +82,7 @@ mutable struct GBInput <: AbstractGB
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
     SLURM_module_load_R_version_name::String
+    SLURM_module_load_BLAS_version_name::String
     verbose::Bool
     function GBInput(;
         fname_geno::String,
@@ -95,6 +109,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
         SLURM_module_load_R_version_name::String = "R",
+        SLURM_module_load_BLAS_version_name::String = "",
         verbose::Bool = true,
     )
         date = Dates.format(now(), "yyyymmddHHMMSS")
@@ -134,6 +149,7 @@ mutable struct GBInput <: AbstractGB
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
             SLURM_module_load_R_version_name,
+            SLURM_module_load_BLAS_version_name,
             verbose,
         )
     end
@@ -408,6 +424,7 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
                     "Unrecognised phenotype file format: `" *
                     fname_pheno *
                     "`.\n" *
+                    "You may have loaded a Trials file. " *
                     "Please refer to the file format guide: **TODO:** {URL HERE}",
                 ),
             )

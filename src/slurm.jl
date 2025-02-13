@@ -129,7 +129,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     open(joinpath(run_outdir, "run.jl"), "w") do file
         write(file, join(julia_script, "\n") * "\n")
     end
-    # Save the Slurm run file
+    # Define the Slurm run file
     slurm_script = [
         "#!/bin/bash",
         string("#SBATCH --job-name='", input.SLURM_job_name, "'"),
@@ -141,6 +141,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
+        string("module load ", input.SLURM_module_load_BLAS_version_name),
         "LD_LIBRARY_PATH=\"\"",
         string(
             "time julia --threads ",
@@ -149,14 +150,45 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
             joinpath(run_outdir, "run.jl \$SLURM_ARRAY_TASK_ID"),
         ),
     ]
+    # Remove the account name, partion and BLAS module is empty
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
     end
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
     end
+    if input.SLURM_module_load_BLAS_version_name == ""
+        slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
+    end
+    # Save the Slurm run file
     open(joinpath(run_outdir, "run.slurm"), "w") do file
         write(file, join(slurm_script, "\n") * "\n")
+    end
+    # Ask the use interactively to confirm
+    println(string(
+        "Are you sure you want to submit a total of ", 
+        n_array_jobs, 
+        " jobs (with a maximum of ",
+        input.SLURM_max_array_jobs_running,
+        " jobs running simultaneously) each requiring ",
+        input.SLURM_cpus_per_task,
+        " cpus and ",
+        input.SLURM_mem_G, 
+        "Gb of RAM with a time limit of ",
+        input.SLURM_time_limit_dd_hhmmss, 
+        "?"
+    ))
+    println("Please enter YES to proceed, otherwise enter anything else to cancel:")
+    proceed = readline()
+    if proceed != "YES"
+        println("Cancelled.")
+        println("If this was a mistake you may submit the array jobs manually via:")
+        join([
+            "sbatch",
+            string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
+            joinpath(run_outdir, "run.slurm"),
+        ], " ")
+        return outdir
     end
     # Submit the array of jobs
     SHELL_COMMAND = Cmd([
