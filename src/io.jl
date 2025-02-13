@@ -9,6 +9,7 @@
         n_folds::Int64
         n_replications::Int64
         keep_all::Bool
+        gwas_models::Any
         maf::Float64
         mtv::Float64
         n_iter::Int64
@@ -35,9 +36,10 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `bulk_cv`: perform cross-validation across all populations, i.e. disregard population grouping (Default = false)
 - `populations`: include only these populations (Default = nothing which means include all populations)
 - `traits`: include only these traits (Default = nothing which means include all traits)
-- `models`: include these model functions (Default = [ridge, bayesa]; see models list: **TODO:** {URL HERE})
+- `models`: genomic prediction model functions (Default = [ridge, bayesa]; see models list: **TODO:** {URL HERE})
 - `n_folds`: number of k partitions for k-fold cross-validation (Default = 5)
 - `n_replications`: number of replications for repeated k-fold cross-validation (Default = 5)
+- `gwas_models`: models to use if performning genome-wide association study (Default = [gwasols, gwaslmm])
 - `keep_all`: keep all entries upon merging genomes and phenomes potentially resulting in sparsities in both structs? (Default = false)
 - `maf`: minimum allele frequency (Default = 0.05)
 - `mtv`: minimum trait variance (Default = 1e-7)
@@ -66,6 +68,7 @@ mutable struct GBInput <: AbstractGB
     models::Any
     n_folds::Int64
     n_replications::Int64
+    gwas_models::Any
     keep_all::Bool
     maf::Float64
     mtv::Float64
@@ -93,6 +96,7 @@ mutable struct GBInput <: AbstractGB
         models::Any = [ridge, bayesa],
         n_folds::Int64 = 5,
         n_replications::Int64 = 5,
+        gwas_models::Any = [gwasols, gwaslmm],
         keep_all::Bool = false,
         maf::Float64 = 0.05,
         mtv::Float64 = 1e-7,
@@ -133,6 +137,7 @@ mutable struct GBInput <: AbstractGB
             models,
             n_folds,
             n_replications,
+            gwas_models,
             keep_all,
             maf,
             mtv,
@@ -171,79 +176,11 @@ UInt64
 """
 function Base.hash(x::GBInput, h::UInt)::UInt
     # x = GBInput(fname_geno="", fname_pheno=""); h = 1.00
-    hash(
-        x.fname_geno,
-        hash(
-            x.fname_pheno,
-            hash(
-                x.bulk_cv,
-                hash(
-                    x.populations,
-                    hash(
-                        x.traits,
-                        hash(
-                            x.models,
-                            hash(
-                                x.n_folds,
-                                hash(
-                                    x.n_replications,
-                                    hash(
-                                        x.keep_all,
-                                        hash(
-                                            x.maf,
-                                            hash(
-                                                x.mtv,
-                                                hash(
-                                                    x.n_iter,
-                                                    hash(
-                                                        x.n_burnin,
-                                                        hash(
-                                                            x.fname_out_prefix,
-                                                            hash(
-                                                                x.SLURM_job_name,
-                                                                hash(
-                                                                    x.SLURM_account_name,
-                                                                    hash(
-                                                                        x.SLURM_partition_name,
-                                                                        hash(
-                                                                            x.SLURM_nodes_per_array_job,
-                                                                            hash(
-                                                                                x.SLURM_tasks_per_node,
-                                                                                hash(
-                                                                                    x.SLURM_cpus_per_task,
-                                                                                    hash(
-                                                                                        x.SLURM_mem_G,
-                                                                                        hash(
-                                                                                            x.SLURM_time_limit_dd_hhmmss,
-                                                                                            hash(
-                                                                                                x.SLURM_max_array_jobs_running,
-                                                                                                hash(
-                                                                                                    x.SLURM_module_load_R_version_name,
-                                                                                                    hash(x.verbose, h),
-                                                                                                ),
-                                                                                            ),
-                                                                                        ),
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-    )
+    for field in fieldnames(typeof(x))
+        # field = fieldnames(typeof(x))[1]
+        h = hash(getfield(x, field), h)
+    end
+    h
 end
 
 
@@ -287,33 +224,13 @@ true
 ```
 """
 function clone(x::GBInput)::GBInput
-    GBInput(
-        fname_geno = deepcopy(x.fname_geno),
-        fname_pheno = deepcopy(x.fname_pheno),
-        bulk_cv = deepcopy(x.bulk_cv),
-        populations = deepcopy(x.populations),
-        traits = deepcopy(x.traits),
-        models = deepcopy(x.models),
-        n_folds = deepcopy(x.n_folds),
-        n_replications = deepcopy(x.n_replications),
-        keep_all = deepcopy(x.keep_all),
-        maf = deepcopy(x.maf),
-        mtv = deepcopy(x.mtv),
-        n_iter = deepcopy(x.n_iter),
-        n_burnin = deepcopy(x.n_burnin),
-        fname_out_prefix = deepcopy(x.fname_out_prefix),
-        SLURM_job_name = deepcopy(x.SLURM_job_name),
-        SLURM_account_name = deepcopy(x.SLURM_account_name),
-        SLURM_partition_name = deepcopy(x.SLURM_partition_name),
-        SLURM_nodes_per_array_job = deepcopy(x.SLURM_nodes_per_array_job),
-        SLURM_tasks_per_node = deepcopy(x.SLURM_tasks_per_node),
-        SLURM_cpus_per_task = deepcopy(x.SLURM_cpus_per_task),
-        SLURM_mem_G = deepcopy(x.SLURM_mem_G),
-        SLURM_time_limit_dd_hhmmss = deepcopy(x.SLURM_time_limit_dd_hhmmss),
-        SLURM_max_array_jobs_running = deepcopy(x.SLURM_max_array_jobs_running),
-        SLURM_module_load_R_version_name = deepcopy(x.SLURM_module_load_R_version_name),
-        verbose = deepcopy(x.verbose),
-    )
+    # x = GBInput(fname_geno="", fname_pheno=""); x.fname_geno="test_geno.jld2"; x.fname_pheno = "test_pheno.tsv";
+    out = GBInput(fname_geno = "", fname_pheno = "")
+    for field in fieldnames(typeof(x))
+        # field = fieldnames(typeof(x))[1]
+        setfield!(out, field, getfield(x, field))
+    end
+    out
 end
 
 """
@@ -335,7 +252,7 @@ false
 ```
 """
 function GBCore.checkdims(input::GBInput)::Bool
-    !isnothing(input.models)
+    !isnothing(input.models) & !isnothing(input.gwas_models)
 end
 
 """
@@ -599,7 +516,6 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     (genomes, phenomes)
 end
 
-
 """
     prepareinputs(input::GBInput)::Vector{GBInput}
 
@@ -635,7 +551,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Load genomes and phenomes to check their validity and dimensions
-    genomes, phenomes = load(input)
+    _genomes, phenomes = load(input)
     # Count the number of models, traits, and populations
     m = length(input.models)
     t = length(phenomes.traits)
@@ -665,23 +581,91 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 else
                     false, [population]
                 end
-                inputs[i] = GBInput(
-                    fname_geno = input.fname_geno,
-                    fname_pheno = input.fname_pheno,
-                    bulk_cv = bulk_cv,
-                    populations = population,
-                    traits = [trait],
-                    models = [model],
-                    n_folds = input.n_folds,
-                    n_replications = input.n_replications,
-                    keep_all = input.keep_all,
-                    maf = input.maf,
-                    mtv = input.mtv,
-                    n_iter = input.n_iter,
-                    n_burnin = input.n_burnin,
-                    fname_out_prefix = input.fname_out_prefix,
-                    verbose = input.verbose,
-                )
+                input_i = clone(input)
+                input_i.bulk_cv = bulk_cv
+                input_i.populations = population
+                input_i.traits = [trait]
+                input_i.models = [model]
+                inputs[i] = input_i
+                i += 1
+            end
+        end
+    end
+    # Output
+    inputs
+end
+
+"""
+    preparegwasinputs(input::GBInput)::Vector{GBInput}
+
+Prepare GBInputs for Slurm array jobs
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
+julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+
+julia> inputs = preparegwasinputs(input);
+
+julia> length(inputs) == 30
+true
+
+julia> rm.([fname_geno, fname_pheno]);
+```
+"""
+function preparegwasinputs(input::GBInput)::Vector{GBInput}
+    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # phenomes = extractphenomes(trials)
+    # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+    # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
+    # Load genomes and phenomes to check their validity and dimensions
+    _genomes, phenomes = load(input)
+    # Count the number of models, traits, and populations
+    m = length(input.gwas_models)
+    t = length(phenomes.traits)
+    p = length(unique(phenomes.populations))
+    # Prepare the GBInputs
+    inputs = if p > 1
+        Vector{GBInput}(undef, m * t * (p + 2))
+    else
+        Vector{GBInput}(undef, m * t * p)
+    end
+    i = 1
+    for model in input.gwas_models
+        # model = input.gwas_models[1]
+        for trait in phenomes.traits
+            # trait = phenomes.traits[1]
+            populations = if p > 1
+                vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
+            else
+                sort(unique(phenomes.populations))
+            end
+            for population in populations
+                # population = populations[1]
+                bulk_cv, population = if population == "BULK_CV"
+                    true, nothing
+                elseif population == "ACROSS_POP_CV"
+                    false, populations[3:end]
+                else
+                    false, [population]
+                end
+                input_i = clone(input)
+                input_i.bulk_cv = bulk_cv
+                input_i.populations = population
+                input_i.traits = [trait]
+                input_i.gwas_models = [model]
+                inputs[i] = input_i
                 i += 1
             end
         end

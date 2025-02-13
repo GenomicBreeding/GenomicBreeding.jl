@@ -3,6 +3,7 @@
 
 Assess genomic prediction accuracy via replicated k-fold cross-validation.
 Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
+Note that you will be prompted to enter YES to proceed with Slurm job submission after showing you the job details to review and confirm.
 
 # Example
 <!-- ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames) -->
@@ -165,29 +166,34 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         write(file, join(slurm_script, "\n") * "\n")
     end
     # Ask the use interactively to confirm
-    println(string(
-        "Are you sure you want to submit a total of ", 
-        n_array_jobs, 
-        " jobs (with a maximum of ",
-        input.SLURM_max_array_jobs_running,
-        " jobs running simultaneously) each requiring ",
-        input.SLURM_cpus_per_task,
-        " cpus and ",
-        input.SLURM_mem_G, 
-        "Gb of RAM with a time limit of ",
-        input.SLURM_time_limit_dd_hhmmss, 
-        "?"
-    ))
+    println(
+        string(
+            "Are you sure you want to submit a total of ",
+            n_array_jobs,
+            " jobs (with a maximum of ",
+            input.SLURM_max_array_jobs_running,
+            " jobs running simultaneously) each requiring ",
+            input.SLURM_cpus_per_task,
+            " cpus and ",
+            input.SLURM_mem_G,
+            "Gb of RAM with a time limit of ",
+            input.SLURM_time_limit_dd_hhmmss,
+            "?",
+        ),
+    )
     println("Please enter YES to proceed, otherwise enter anything else to cancel:")
     proceed = readline()
     if proceed != "YES"
         println("Cancelled.")
         println("If this was a mistake you may submit the array jobs manually via:")
-        join([
-            "sbatch",
-            string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
-            joinpath(run_outdir, "run.slurm"),
-        ], " ")
+        join(
+            [
+                "sbatch",
+                string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
+                joinpath(run_outdir, "run.slurm"),
+            ],
+            " ",
+        )
         return outdir
     end
     # Submit the array of jobs
@@ -200,6 +206,3 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
     # Output the name of the output directory
     outdir
 end
-
-# using Libdl
-# filter!(contains("curl"), dllist())

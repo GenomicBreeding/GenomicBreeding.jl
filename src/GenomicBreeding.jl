@@ -42,8 +42,8 @@ include("genomic_prediction.jl")
 include("slurm.jl")
 include("plot.jl")
 
-export GBInput, load, prepareinputs
-export assess, extracteffects
+export GBInput, load, prepareinputs, preparegwasinputs
+export assess, extracteffects, gwas
 export submitslurmarrayjobs
 export plot
 

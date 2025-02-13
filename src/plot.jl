@@ -5,6 +5,7 @@
         skip_phenomes::Bool = false,
         format::String = "svg",
         plot_size::Tuple{Int64,Int64} = (600, 450),
+        overwrite::Bool = false,
     )::String
 
 Plot genomes, phenomes, and CVs, if present.
@@ -151,8 +152,8 @@ function plot(;
     # CVs
     if !isnothing(fnames_cvs)
         if overwrite
-            try 
-                rm(joinpath(plot_outdir, "cvs"), force=true, recursive=true)
+            try
+                rm(joinpath(plot_outdir, "cvs"), force = true, recursive = true)
                 mkdir(joinpath(plot_outdir, "cvs"))
             catch
                 throw(ArgumentError("Error overwriting the output directory: `" * joinpath(plot_outdir, "cvs") * "`"))
@@ -168,7 +169,15 @@ function plot(;
                 println(string("Vector{CV}: ", plot_type))
             end
             plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
-            append!(fnames, saveplots(plots, format = format, prefix = joinpath(plot_outdir, "cvs", string(plot_type)), overwrite = overwrite))
+            append!(
+                fnames,
+                saveplots(
+                    plots,
+                    format = format,
+                    prefix = joinpath(plot_outdir, "cvs", string(plot_type)),
+                    overwrite = overwrite,
+                ),
+            )
         end
     end
     # Output directory

@@ -74,6 +74,7 @@ input = GBInput(
     SLURM_time_limit_dd_hhmmss="00-00:15:00",
     SLURM_max_array_jobs_running=10,
     SLURM_module_load_R_version_name="R",
+    SLURM_module_load_BLAS_version_name="FlexiBLAS",
     verbose=true
 )
 # Preliminary look at the genotype and phenotype data
@@ -89,7 +90,9 @@ run(`sh -c 'tail slurm-*_*.out'`)
 run(`sh -c 'grep -i "err" slurm-*_*.out'`)
 run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`)
 readdir(outdir)
-# Once the array jobs have finishes or at least a couple of jobs have finished, run below and rerun as you wish to update the plots:
+# Once the array jobs have finishes or at least a couple of jobs have finished, run below.
+# Rerun as you often as wish to update the plots.
+# You may exit Julia and just run the plotting function below after correctly defining input::GBInput above.
 plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
 ```
 
