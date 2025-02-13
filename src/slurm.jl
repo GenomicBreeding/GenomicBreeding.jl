@@ -106,7 +106,14 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         end
     end
     # Check the input files, define the vector of GBInput structs for parallel execution and save them in the run directory
-    inputs = prepareinputs(input)
+    valid_analysis_functions = [assess, gwas]
+    inputs = if analysis == assess
+        prepareinputs(input)
+    elseif analysis == gwas
+        preparegwasinputs(input)
+    else
+        throw(ArgumentError("Analysis: `" * string(analysis) * "` invalid. Please choose from:\n\t‣ " * join(string.(valid_analysis_functions), "\n\t‣ ")))
+    end
     n_array_jobs = length(inputs)
     for i = 1:n_array_jobs
         # i = 1

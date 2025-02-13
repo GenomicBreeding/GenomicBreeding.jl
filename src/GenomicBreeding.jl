@@ -39,6 +39,7 @@ using ProgressMeter, UnicodePlots
 
 include("io.jl")
 include("genomic_prediction.jl")
+include("gwas.jl")
 include("slurm.jl")
 include("plot.jl")
 
