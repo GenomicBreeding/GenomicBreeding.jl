@@ -43,8 +43,8 @@ include("gwas.jl")
 include("slurm.jl")
 include("plot.jl")
 
-export GBInput, load, prepareinputs, preparegwasinputs
-export assess, extracteffects, gwas
+export GBInput, load, prepareinputs, prepareoutprefixandoutdir
+export cv, fit, predict, gwas
 export submitslurmarrayjobs
 export plot
 

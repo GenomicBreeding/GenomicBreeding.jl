@@ -62,6 +62,7 @@ Input struct (belongs to GBCore.AbstractGB type)
 mutable struct GBInput <: AbstractGB
     fname_geno::String
     fname_pheno::String
+    fname_allele_effects_jld2s::Vector{String}
     bulk_cv::Bool
     populations::Union{Nothing,Vector{String}}
     traits::Union{Nothing,Vector{String}}
@@ -89,7 +90,8 @@ mutable struct GBInput <: AbstractGB
     verbose::Bool
     function GBInput(;
         fname_geno::String,
-        fname_pheno::String,
+        fname_pheno::String = "",
+        fname_allele_effects_jld2s::Vector{String} = [""],
         bulk_cv::Bool = false,
         populations::Union{Nothing,Vector{String}} = nothing,
         traits::Union{Nothing,Vector{String}} = nothing,
@@ -131,6 +133,7 @@ mutable struct GBInput <: AbstractGB
         new(
             fname_geno,
             fname_pheno,
+            fname_allele_effects_jld2s,
             bulk_cv,
             populations,
             traits,
@@ -255,6 +258,12 @@ function GBCore.checkdims(input::GBInput)::Bool
     !isnothing(input.models) & !isnothing(input.gwas_models)
 end
 
+# TODO: check inputs given analysis
+function checkinputs(input::GBInput, analysis::Function=[cv, fit, predict, gwas][1])::Bool
+    true
+end
+
+
 """
     load(input::GBInput)::Tuple{Genomes, Phenomes}
 
@@ -330,22 +339,31 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
             end
         end
     end
-    phenomes = try
-        readdelimited(Phenomes, fname = fname_pheno)
-    catch
+    phenomes = if fname_pheno != ""
         try
-            readjld2(Phenomes, fname = fname_pheno)
+            readdelimited(Phenomes, fname = fname_pheno)
         catch
-            throw(
-                ArgumentError(
-                    "Unrecognised phenotype file format: `" *
-                    fname_pheno *
-                    "`.\n" *
-                    "You may have loaded a Trials file. " *
-                    "Please refer to the file format guide: **TODO:** {URL HERE}",
-                ),
-            )
+            try
+                readjld2(Phenomes, fname = fname_pheno)
+            catch
+                throw(
+                    ArgumentError(
+                        "Unrecognised phenotype file format: `" *
+                        fname_pheno *
+                        "`.\n" *
+                        "You may have loaded a Trials file. " *
+                        "Please refer to the file format guide: **TODO:** {URL HERE}",
+                    ),
+                )
+            end
         end
+    else
+        dummpy_phenomes = Phenomes(n = length(genomes.entries), t = 1)
+        dummpy_phenomes.entries = genomes.entries
+        dummpy_phenomes.populations = genomes.populations
+        dummpy_phenomes.traits = ["dummy_trait"]
+        dummpy_phenomes.phenotypes = rand(length(dummpy_phenomes.entries), 1)
+        dummpy_phenomes
     end
     if verbose
         println("##############")
@@ -535,7 +553,7 @@ julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
 
-julia> inputs = prepareinputs(input);
+julia> inputs = prepareinputs(input, analysis=cv);
 
 julia> length(inputs) == 30
 true
@@ -543,7 +561,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function prepareinputs(input::GBInput)::Vector{GBInput}
+function prepareinputs(input::GBInput; analysis::Function = [cv, fit, predict, gwas][1])::Vector{GBInput}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -562,9 +580,55 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     else
         Vector{GBInput}(undef, m * t * p)
     end
+    # Define the model/s to use depending on the type of analysis requested
+    models = if analysis ∈ [cv, fit]
+        input.models
+    elseif analysis ∈ [predict]
+        input.fname_allele_effects_jld2s
+    elseif analysis ∈ [gwas]
+        input.gwas_models
+    else
+        valid_analysis_functions = [cv, fit, predict, gwas]
+        throw(
+            ArgumentError(
+                "Analysis: `" *
+                string(analysis) *
+                "` invalid. Please choose from:\n\t‣ " *
+                join(string.(valid_analysis_functions), "\n\t‣ "),
+            ),
+        )
+    end
+    if length(models) == 0
+        if analysis ∈ [cv, fit]
+            throw(
+                ArgumentError(
+                    "No model specified for `" *
+                    string(analysis) *
+                    "`. Please specify the genomic prediction model/s you wish to use, e.g. `rigde`, `bayesa` or `bayesb`.",
+                ),
+            )
+        elseif analysis ∈ [predict]
+            throw(
+                ArgumentError(
+                    "No model specified for `" *
+                    "predict" *
+                    "`. Please specify the Fit struct/s containing the allele effects (i.e. JLD2 output of `GenomicBreeding.fit(...)`) you wish to use.",
+                ),
+            )
+        else
+            throw(
+                ArgumentError(
+                    "No model specified for `" *
+                    "gwas" *
+                    "`. Please specify the GWAS model/s you wish to use, e.g. `gwasols`, `gwaslmm` or `gwasreml`.",
+                ),
+            )
+        end
+    end
+    # Define the GBInputs for Slurm job arrays or straightforward single computer jobs
     i = 1
-    for model in input.models
-        # model = input.models[1]
+    for model in models
+        # model = models[1]
         for trait in phenomes.traits
             # trait = phenomes.traits[1]
             populations = if p > 1
@@ -585,7 +649,14 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 input_i.bulk_cv = bulk_cv
                 input_i.populations = population
                 input_i.traits = [trait]
-                input_i.models = [model]
+                if analysis == predict
+                    # Define the model as the filename of the tab-delimited allele effects table
+                    # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
+                    input_i.fname_allele_effects_tsv = [model]
+                    input_i.fname_pheno = ""
+                else
+                    input_i.models = [model]
+                end
                 inputs[i] = input_i
                 i += 1
             end
@@ -596,80 +667,47 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
 end
 
 """
-    preparegwasinputs(input::GBInput)::Vector{GBInput}
+    prepareoutprefixandoutdir(input::GBInput)::String
 
-Prepare GBInputs for Slurm array jobs
+Prepare the output prefix by replacing problematic strings in the prefix of the output filenames and instantiating the output folder
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
-julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+julia> input = GBInput(fname_geno="some_dir/fname_geno.jld2", fname_pheno="some_dir/fname_pheno.jld2", fname_out_prefix="GBOutput/some@!_%&prefix-", verbose=false);
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> fname_out_prefix = prepareoutprefixandoutdir(input)
+"GBOutput/some_____prefix-"
 
-julia> phenomes = extractphenomes(trials);
-
-julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
-    
-julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
-
-julia> inputs = preparegwasinputs(input);
-
-julia> length(inputs) == 30
-true
-
-julia> rm.([fname_geno, fname_pheno]);
+julia> rm(dirname(fname_out_prefix), recursive=true);
 ```
 """
-function preparegwasinputs(input::GBInput)::Vector{GBInput}
-    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
-    # phenomes = extractphenomes(trials)
-    # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
-    # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-    # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
-    # Load genomes and phenomes to check their validity and dimensions
-    _genomes, phenomes = load(input)
-    # Count the number of models, traits, and populations
-    m = length(input.gwas_models)
-    t = length(phenomes.traits)
-    p = length(unique(phenomes.populations))
-    # Prepare the GBInputs
-    inputs = if p > 1
-        Vector{GBInput}(undef, m * t * (p + 2))
-    else
-        Vector{GBInput}(undef, m * t * p)
-    end
-    i = 1
-    for model in input.gwas_models
-        # model = input.gwas_models[1]
-        for trait in phenomes.traits
-            # trait = phenomes.traits[1]
-            populations = if p > 1
-                vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
-            else
-                sort(unique(phenomes.populations))
-            end
-            for population in populations
-                # population = populations[1]
-                bulk_cv, population = if population == "BULK_CV"
-                    true, nothing
-                elseif population == "ACROSS_POP_CV"
-                    false, populations[3:end]
-                else
-                    false, [population]
-                end
-                input_i = clone(input)
-                input_i.bulk_cv = bulk_cv
-                input_i.populations = population
-                input_i.traits = [trait]
-                input_i.gwas_models = [model]
-                inputs[i] = input_i
-                i += 1
-            end
+function prepareoutprefixandoutdir(input::GBInput)::String
+    # Instantiate the output directory if it does not exist
+    if !isdir(dirname(input.fname_out_prefix))
+        try
+            mkdir(dirname(input.fname_out_prefix))
+        catch
+            throw(ArgumentError("Error creating the output directory: `" * dirname(input.fname_out_prefix) * "`"))
         end
     end
-    # Output
-    inputs
+    # Make sure we do not have any problematic symbols in the output filenames
+    directory_name = dirname(input.fname_out_prefix)
+    prefix_name = basename(input.fname_out_prefix)
+    problematic_strings::Vector{String} = [" ", "\n", "\t", "(", ")", "&", "|", ":", "=", "+", "*", "%", "@", "!"]
+    for s in problematic_strings
+        prefix_name = replace(prefix_name, s => "_")
+    end
+    fname_out_prefix = if input.fname_out_prefix != joinpath(directory_name, prefix_name)
+        if input.verbose
+            @warn "Modifying the user defined `input.fname_out_prefix` as it contains problematic symbols, i.e. from `" *
+                  input.fname_out_prefix *
+                  "` into `" *
+                  joinpath(directory_name, prefix_name) *
+                  "`."
+        end
+        joinpath(directory_name, prefix_name)
+    else
+        input.fname_out_prefix
+    end
+    fname_out_prefix
 end

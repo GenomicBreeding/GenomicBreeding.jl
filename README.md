@@ -79,9 +79,11 @@ input = GBInput(
 )
 # Preliminary look at the genotype and phenotype data
 plot(input=input, format="png", plot_size=(700, 500))
-# Perform replicated k-fold cross-validation
+# Documentation of the main user interface function (take note of the currently available analyses)
+@doc submitslurmarrayjobs
+# Perform replicated k-fold cross-validation (`analysis = cv`; use `fit` to extract allele effects, `predict` to compute GEBVs, and `gwas` for GWAS)
 # Note that here you will be prompted to enter YES to proceed.
-outdir = submitslurmarrayjobs(input=input, analysis=assess)
+outdir = submitslurmarrayjobs(input=input, analysis=cv)
 # Monitor the Slurm jobs
 run(`sh -c 'squeue -u $USER'`)
 run(`sh -c 'ls -lhtr slurm-*_*.out'`)
@@ -107,7 +109,7 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 ### REPL prelude
 
 ```shell
-julia --threads 8,1 --load test/prelude.jl
+julia --threads 8,1 --load test/interactive_prelude.jl
 ```
 
 ### Format and test

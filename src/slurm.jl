@@ -5,6 +5,12 @@ Assess genomic prediction accuracy via replicated k-fold cross-validation.
 Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
 Note that you will be prompted to enter YES to proceed with Slurm job submission after showing you the job details to review and confirm.
 
+Valid analysis functions:
+- `cv`: replicated k-fold cross-validation
+- `fit`: fit genomic prediction models without cross-validation to extract allele effects to compute GEBVs on other genomes
+- `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field of GBInput to one or more of the following: `gwasols`, `gwaslmm` or `gwasreml`)
+- `gwas`: genome-wide association study
+
 # Example
 <!-- ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames) -->
 ```
@@ -106,14 +112,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         end
     end
     # Check the input files, define the vector of GBInput structs for parallel execution and save them in the run directory
-    valid_analysis_functions = [assess, gwas]
-    inputs = if analysis == assess
-        prepareinputs(input)
-    elseif analysis == gwas
-        preparegwasinputs(input)
-    else
-        throw(ArgumentError("Analysis: `" * string(analysis) * "` invalid. Please choose from:\n\t‣ " * join(string.(valid_analysis_functions), "\n\t‣ ")))
-    end
+    inputs = prepareinputs(input, analysis = analysis)
     n_array_jobs = length(inputs)
     for i = 1:n_array_jobs
         # i = 1
