@@ -18,20 +18,20 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=cv, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
 julia> outdir = submitslurmarrayjobs(input_cv);
 
-julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=fit, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
 julia> outdir = submitslurmarrayjobs(input_fit);
 
 
 
 
-julia> input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+julia> input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=cv, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
 julia> outdir = submitslurmarrayjobs(input_cv)
 GBOutput
@@ -186,17 +186,21 @@ function submitslurmarrayjobs(input::GBInput)::String
         ),
     )
     println("Please enter YES to proceed, otherwise enter anything else to cancel:")
-    proceed = readline()
+    proceed = strip(readline())
+    @show proceed == "YES"
     if proceed != "YES"
+        println(proceed)
         println("Cancelled.")
         println("If this was a mistake you may submit the array jobs manually via:")
-        join(
-            [
-                "sbatch",
-                string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
-                joinpath(run_outdir, "run.slurm"),
-            ],
-            " ",
+        println(
+            join(
+                [
+                    "sbatch",
+                    string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
+                    joinpath(run_outdir, "run.slurm"),
+                ],
+                " ",
+            ),
         )
         return outdir
     end
