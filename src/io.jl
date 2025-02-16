@@ -39,7 +39,7 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `analysis`: analysis to perform or function to use (Default = cv):
     + `cv`: replicated k-fold cross-validation
     + `fit`: fit genomic prediction models without cross-validation to extract allele effects to compute GEBVs on other genomes
-    + `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field of GBInput to one or more of the following: `gwasols`, `gwaslmm` or `gwasreml`)
+    + `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field)
     + `gwas`: genome-wide association study
 - `bulk_cv`: perform cross-validation across all populations, i.e. disregard population grouping (Default = false)
 - `populations`: include only these populations (Default = nothing which means include all populations)
@@ -121,7 +121,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_nodes_per_array_job::Int64 = 1,
         SLURM_tasks_per_node::Int64 = 1,
         SLURM_cpus_per_task::Int64 = 1,
-        SLURM_mem_G::Float64 = 1.0,
+        SLURM_mem_G::Number = 1.0,
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
         SLURM_module_load_R_version_name::String = "R",
@@ -164,7 +164,7 @@ mutable struct GBInput <: AbstractGB
             SLURM_nodes_per_array_job,
             SLURM_tasks_per_node,
             SLURM_cpus_per_task,
-            SLURM_mem_G,
+            Float64(SLURM_mem_G),
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
             SLURM_module_load_R_version_name,
