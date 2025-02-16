@@ -42,7 +42,7 @@ Pkg.add(["StatsBase", "MixedModels", "MultivariateStats", "UnicodePlots", "Color
 
 ### 1. Example 1: simulated data
 
-Here's a simple example using simulated data:
+Here's a simple example using simulated data to perform replicated k-fold cross validation:
 
 ```julia
 # It is always a good idea to keep all your packages updated
@@ -64,6 +64,7 @@ fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
 input = GBInput(
     fname_geno=fname_geno, 
     fname_pheno=fname_pheno,
+    anaysis=cv, # set analysis to use the `cv` function for replicated k-fold cross-validation
     models = [lasso, bayesa],
     n_folds=2, 
     n_replications=2, 
@@ -81,9 +82,9 @@ input = GBInput(
 plot(input=input, format="png", plot_size=(700, 500))
 # Documentation of the main user interface function (take note of the currently available analyses)
 @doc submitslurmarrayjobs
-# Perform replicated k-fold cross-validation (`analysis = cv`; use `fit` to extract allele effects, `predict` to compute GEBVs, and `gwas` for GWAS)
+# Submit the Slurm array jobs
 # Note that here you will be prompted to enter YES to proceed.
-outdir = submitslurmarrayjobs(input=input, analysis=cv)
+outdir = submitslurmarrayjobs(input)
 # Monitor the Slurm jobs
 run(`sh -c 'squeue -u $USER'`)
 run(`sh -c 'ls -lhtr slurm-*_*.out'`)

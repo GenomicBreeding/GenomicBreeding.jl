@@ -2,14 +2,16 @@
     mutable struct GBInput
         fname_geno::String
         fname_pheno::String
+        fname_allele_effects_jld2s::Vector{String}
+        analysis::Function
         bulk_cv::Bool
         populations::Union{Nothing,Vector{String}}
         traits::Union{Nothing,Vector{String}}
         models::Any
         n_folds::Int64
         n_replications::Int64
-        keep_all::Bool
         gwas_models::Any
+        keep_all::Bool
         maf::Float64
         mtv::Float64
         n_iter::Int64
@@ -32,7 +34,13 @@
 Input struct (belongs to GBCore.AbstractGB type)
 
 - `fname_geno`: genotype file (see file format guide: **TODO:** {URL HERE})
-- `fname_pheno`: phenotype file (see file format guide: **TODO:** {URL HERE})
+- `fname_pheno`: phenotype file (see file format guide: **TODO:** {URL HERE}; Default = "")
+- `fname_allele_effects_jld2s`: vector of filenames of JLD2 files containing the Fit struct of a genomic prediction model (Default = [""])
+- `analysis`: analysis to perform or function to use (Default = cv):
+    + `cv`: replicated k-fold cross-validation
+    + `fit`: fit genomic prediction models without cross-validation to extract allele effects to compute GEBVs on other genomes
+    + `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field of GBInput to one or more of the following: `gwasols`, `gwaslmm` or `gwasreml`)
+    + `gwas`: genome-wide association study
 - `bulk_cv`: perform cross-validation across all populations, i.e. disregard population grouping (Default = false)
 - `populations`: include only these populations (Default = nothing which means include all populations)
 - `traits`: include only these traits (Default = nothing which means include all traits)
@@ -63,6 +71,7 @@ mutable struct GBInput <: AbstractGB
     fname_geno::String
     fname_pheno::String
     fname_allele_effects_jld2s::Vector{String}
+    analysis::Function
     bulk_cv::Bool
     populations::Union{Nothing,Vector{String}}
     traits::Union{Nothing,Vector{String}}
@@ -92,6 +101,7 @@ mutable struct GBInput <: AbstractGB
         fname_geno::String,
         fname_pheno::String = "",
         fname_allele_effects_jld2s::Vector{String} = [""],
+        analysis::Function = cv,
         bulk_cv::Bool = false,
         populations::Union{Nothing,Vector{String}} = nothing,
         traits::Union{Nothing,Vector{String}} = nothing,
@@ -134,6 +144,7 @@ mutable struct GBInput <: AbstractGB
             fname_geno,
             fname_pheno,
             fname_allele_effects_jld2s,
+            analysis,
             bulk_cv,
             populations,
             traits,
@@ -258,9 +269,87 @@ function GBCore.checkdims(input::GBInput)::Bool
     !isnothing(input.models) & !isnothing(input.gwas_models)
 end
 
-# TODO: check inputs given analysis
-function checkinputs(input::GBInput, analysis::Function=[cv, fit, predict, gwas][1])::Bool
-    true
+"""
+    checkinputs(input::GBInput)::Bool
+
+Check input compatibility with the analysis requested
+
+# Examples
+```jldoctest; setup = :(using GBCore, GenomicBreeding, StatsBase)
+julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+    
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv);
+
+julia> length(checkinputs(input)) == 0
+true
+
+julia> input.fname_pheno = ""; length(checkinputs(input)) == 0
+false
+```
+"""
+function checkinputs(input::GBInput)::Vector{String}
+    errors::Vector{String} = []
+    valid_analysis_functions = [cv, fit, predict, gwas]
+    if !(input.analysis ∈ valid_analysis_functions)
+        push!(
+            errors,
+            string(
+                "Analysis: `",
+                string(input.analysis),
+                "` invalid. Please choose from:\n\t‣ ",
+                join(string.(valid_analysis_functions), "\n\t‣ "),
+            ),
+        )
+    end
+    if input.analysis ∈ [cv, fit, gwas]
+        if !isfile(input.fname_geno)
+            push!(errors, string("The input genotype file `", input.fname_geno, "` does not exist."))
+        end
+        if !isfile(input.fname_pheno)
+            push!(errors, string("The input phenotype file `", input.fname_pheno, "` does not exist."))
+        end
+        if length(input.models) == 0
+            if input.analysis ∈ [cv, fit]
+                push!(
+                    errors,
+                    string(
+                        "No model specified for `",
+                        input.analysis,
+                        "`. Please specify the genomic prediction model/s you wish to use, e.g. `rigde`, `bayesa` or `bayesb`.",
+                    ),
+                )
+            else
+                push!(
+                    errors,
+                    string(
+                        "No model specified for `",
+                        input.analysis,
+                        "`. Please specify the genomic prediction model/s you wish to use, e.g. `gwasols`, `gwaslmm` or `gwasreml`.",
+                    ),
+                )
+            end
+        end
+    end
+    if input.analysis ∈ [predict]
+        if !isfile(input.fname_geno)
+            push!(errors, string("The input genotype file `", input.fname_geno, "` does not exist."))
+        end
+        if !isfile(input.fname_allele_effects_jld2s)
+            push!(
+                errors,
+                string("The input allele effects file `", input.fname_allele_effects_jld2s, "` does not exist."),
+            )
+        end
+    end
+    return errors
 end
 
 
@@ -315,6 +404,11 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
     maf = input.maf
     mtv = input.mtv
     verbose = input.verbose
+    # Check input files and analysis compatibility
+    errors = checkinputs(input)
+    if length(errors) > 0
+        throw(ArgumentError(string("Errors:\n\t• ", join(errors, "\n\t• "))))
+    end
     # Load genomes and phenomes
     genomes = try
         readdelimited(Genomes, fname = fname_geno)
@@ -551,9 +645,9 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
     
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, verbose=false);
 
-julia> inputs = prepareinputs(input, analysis=cv);
+julia> inputs = prepareinputs(input);
 
 julia> length(inputs) == 30
 true
@@ -561,7 +655,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function prepareinputs(input::GBInput; analysis::Function = [cv, fit, predict, gwas][1])::Vector{GBInput}
+function prepareinputs(input::GBInput)::Vector{GBInput}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -581,49 +675,23 @@ function prepareinputs(input::GBInput; analysis::Function = [cv, fit, predict, g
         Vector{GBInput}(undef, m * t * p)
     end
     # Define the model/s to use depending on the type of analysis requested
-    models = if analysis ∈ [cv, fit]
+    models = if input.analysis ∈ [cv, fit]
         input.models
-    elseif analysis ∈ [predict]
+    elseif input.analysis ∈ [predict]
         input.fname_allele_effects_jld2s
-    elseif analysis ∈ [gwas]
+    elseif input.analysis ∈ [gwas]
         input.gwas_models
     else
+        # Should be alreat checked in load(...) which calls checkinputs(..)
         valid_analysis_functions = [cv, fit, predict, gwas]
         throw(
             ArgumentError(
                 "Analysis: `" *
-                string(analysis) *
+                string(input.analysis) *
                 "` invalid. Please choose from:\n\t‣ " *
                 join(string.(valid_analysis_functions), "\n\t‣ "),
             ),
         )
-    end
-    if length(models) == 0
-        if analysis ∈ [cv, fit]
-            throw(
-                ArgumentError(
-                    "No model specified for `" *
-                    string(analysis) *
-                    "`. Please specify the genomic prediction model/s you wish to use, e.g. `rigde`, `bayesa` or `bayesb`.",
-                ),
-            )
-        elseif analysis ∈ [predict]
-            throw(
-                ArgumentError(
-                    "No model specified for `" *
-                    "predict" *
-                    "`. Please specify the Fit struct/s containing the allele effects (i.e. JLD2 output of `GenomicBreeding.fit(...)`) you wish to use.",
-                ),
-            )
-        else
-            throw(
-                ArgumentError(
-                    "No model specified for `" *
-                    "gwas" *
-                    "`. Please specify the GWAS model/s you wish to use, e.g. `gwasols`, `gwaslmm` or `gwasreml`.",
-                ),
-            )
-        end
     end
     # Define the GBInputs for Slurm job arrays or straightforward single computer jobs
     i = 1
@@ -649,7 +717,7 @@ function prepareinputs(input::GBInput; analysis::Function = [cv, fit, predict, g
                 input_i.bulk_cv = bulk_cv
                 input_i.populations = population
                 input_i.traits = [trait]
-                if analysis == predict
+                if input.analysis == predict
                     # Define the model as the filename of the tab-delimited allele effects table
                     # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
                     input_i.fname_allele_effects_tsv = [model]

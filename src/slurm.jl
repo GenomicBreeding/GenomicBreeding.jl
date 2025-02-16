@@ -1,15 +1,9 @@
 """
-    submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
+    submitslurmarrayjobs(; input::GBInput)::String
 
 Assess genomic prediction accuracy via replicated k-fold cross-validation.
 Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
 Note that you will be prompted to enter YES to proceed with Slurm job submission after showing you the job details to review and confirm.
-
-Valid analysis functions:
-- `cv`: replicated k-fold cross-validation
-- `fit`: fit genomic prediction models without cross-validation to extract allele effects to compute GEBVs on other genomes
-- `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field of GBInput to one or more of the following: `gwasols`, `gwaslmm` or `gwasreml`)
-- `gwas`: genome-wide association study
 
 # Example
 <!-- ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames) -->
@@ -24,33 +18,36 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=cv, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> outdir = submitslurmarrayjobs(input=input, analysis=assess)
+julia> outdir = submitslurmarrayjobs(input_cv);
+
+julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=fit, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+
+julia> outdir = submitslurmarrayjobs(input_fit);
+
+
+
+
+julia> input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno analysis=cv, SLURM_cpus_per_task=6, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
+
+julia> outdir = submitslurmarrayjobs(input_cv)
 GBOutput
 
 julia> run(`squeue`)
 ```
 """
-function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
+function submitslurmarrayjobs(input::GBInput)::String
     # genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-    # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=9)
-    # analysis = assess
-    # Catch the 3 main errors early:
-    #   1. input genotype file does not exist
-    #   2. input phenotype file does not exist
-    #   3. R::BGLR package is not installed.
-    errors::Vector{String} = []
-    if !isfile(input.fname_geno)
-        push!(errors, string("The genotype file (", input.fname_geno, ") does not exist."))
-    end
-    if !isfile(input.fname_pheno)
-        push!(errors, string("The phenotype file (", input.fname_pheno, ") does not exist."))
-    end
+    # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=6, SLURM_mem_G=9)
+    # Catch the main errors early
+    errors::Vector{String} = checkinputs(input)
     begin
         commands = [
             "#!/bin/bash",
@@ -112,7 +109,7 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         end
     end
     # Check the input files, define the vector of GBInput structs for parallel execution and save them in the run directory
-    inputs = prepareinputs(input, analysis = analysis)
+    inputs = prepareinputs(input)
     n_array_jobs = length(inputs)
     for i = 1:n_array_jobs
         # i = 1
@@ -127,10 +124,11 @@ function submitslurmarrayjobs(; input::GBInput, analysis::Function)::String
         # "\tnothing",
         # "end",
         "using GenomicBreeding",
-        "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc",
+        "import GenomicBreeding: cv, fit, predict, gwas",
+        " import GenomicBreeding ols, ridge, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml",
         string("input = readjld2(GBInput, fname=joinpath(\"", run_outdir, "\", string(\"GBInput-\", i, \".jld2\")))"),
         "display(input)",
-        string("output = ", analysis, "(input)"),
+        string("output = ", input.analysis, "(input)"),
         "display(output)",
     ]
     open(joinpath(run_outdir, "run.jl"), "w") do file
