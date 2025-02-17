@@ -6,37 +6,40 @@ Outputs are saved as JLD2 (each containing a CV struct per fold, replication, an
 Note that you will be prompted to enter YES to proceed with Slurm job submission after showing you the job details to review and confirm.
 
 # Example
-<!-- ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames) -->
-```
-julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
-
-julia> phenomes = extractphenomes(trials);
-
-julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
-
-julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-
-julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
-
-julia> outdir = submitslurmarrayjobs(input_cv);
-
-julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
-
-julia> outdir = submitslurmarrayjobs(input_fit);
+```julia
+using GBCore, GBIO, GenomicBreeding, StatsBase;
+using GenomicBreeding: cv, fit, predict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
+genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+phenomes = extractphenomes(trials);
+fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_BLAS_version_name="FlexiBLAS", fname_out_prefix="GBOutput/test-", verbose=false);
+outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
+run(`sh -c 'squeue'`);
+run(`sh -c 'tail slurm-*_*.out'`);
+run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`);
+readdir(outdir);
 
 
 
 
-julia> input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=0.5, fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> outdir = submitslurmarrayjobs(input_cv)
-GBOutput
+input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_BLAS_version_name="FlexiBLAS", fname_out_prefix="GBOutput/test-", verbose=false);
 
-julia> run(`squeue`)
+outdir = submitslurmarrayjobs(input_fit);
+
+
+
+
+input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_BLAS_version_name="FlexiBLAS", fname_out_prefix="GBOutput/test-", verbose=false);
+
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_BLAS_version_name="FlexiBLAS", fname_out_prefix="GBOutput/test-", verbose=false);
+
+outdir = submitslurmarrayjobs(input_cv)
+
+run(`squeue`)
 ```
 """
 function submitslurmarrayjobs(input::GBInput)::String
@@ -125,7 +128,7 @@ function submitslurmarrayjobs(input::GBInput)::String
         # "end",
         "using GenomicBreeding",
         "import GenomicBreeding: cv, fit, predict, gwas",
-        " import GenomicBreeding ols, ridge, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml",
+        "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml",
         string("input = readjld2(GBInput, fname=joinpath(\"", run_outdir, "\", string(\"GBInput-\", i, \".jld2\")))"),
         "display(input)",
         string("output = ", input.analysis, "(input)"),

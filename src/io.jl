@@ -23,7 +23,7 @@
         SLURM_nodes_per_array_job::Int64
         SLURM_tasks_per_node::Int64
         SLURM_cpus_per_task::Int64
-        SLURM_mem_G::Float64
+        SLURM_mem_G::Int64
         SLURM_time_limit_dd_hhmmss::String
         SLURM_max_array_jobs_running::Int64
         SLURM_module_load_R_version_name::String
@@ -60,7 +60,7 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `SLURM_nodes_per_array_job`: number of nodes per array job (Default = 1)
 - `SLURM_tasks_per_node`: number of tasks per node (Default = 1)
 - `SLURM_cpus_per_task`: number of CPU cores per task (Default = 1)
-- `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1.00)
+- `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1)
 - `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
 - `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
 - `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "R")
@@ -91,7 +91,7 @@ mutable struct GBInput <: AbstractGB
     SLURM_nodes_per_array_job::Int64
     SLURM_tasks_per_node::Int64
     SLURM_cpus_per_task::Int64
-    SLURM_mem_G::Float64
+    SLURM_mem_G::Int64
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
     SLURM_module_load_R_version_name::String
@@ -121,7 +121,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_nodes_per_array_job::Int64 = 1,
         SLURM_tasks_per_node::Int64 = 1,
         SLURM_cpus_per_task::Int64 = 1,
-        SLURM_mem_G::Number = 1.0,
+        SLURM_mem_G::Int64 = 1,
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
         SLURM_module_load_R_version_name::String = "R",
