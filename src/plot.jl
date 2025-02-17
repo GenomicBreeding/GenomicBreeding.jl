@@ -55,7 +55,7 @@ function plot(;
     else
         nothing, nothing
     end
-    # Load CVs
+    # Define output directory of the CVs
     directory_name = if dirname(input.fname_out_prefix) == ""
         pwd()
     else

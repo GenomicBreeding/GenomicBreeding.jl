@@ -128,7 +128,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_module_load_BLAS_version_name::String = "",
         verbose::Bool = true,
     )
-        date = Dates.format(now(), "yyyymmddHHMMSS")
+        date = Dates.format(now(), "yyyymmddHHMMSSssss")
         randnum = Int(round(1_000 * rand()))
         fname_out_prefix = if fname_out_prefix == ""
             string("GBOutput/output-", date, "-", randnum, "-")
