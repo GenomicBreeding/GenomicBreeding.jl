@@ -121,6 +121,8 @@ function fit(input::GBInput)::Vector{String}
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Parse input and prepare the output directory
     models = input.models
+    populations = input.populations
+    traits = input.traits
     n_iter = input.n_iter
     n_burnin = input.n_burnin
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
@@ -129,22 +131,16 @@ function fit(input::GBInput)::Vector{String}
     # Load and merge the genomes and phenomes
     genomes, phenomes = load(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    populations = input.populations
-    traits = input.traits
-    model_fits::Vector{Fit} = fill(
-        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
-        (1 + length(populations)) * length(traits) * length(models),
-    )
-    fname_allele_effects_jld2s::Vector{String} = fill("", (1 + length(populations)) * length(traits) * length(models))
+    model_fits::Vector{Fit} = []
+    fname_allele_effects_jld2s::Vector{String} = []
     # Fit the entire data to extract effects per trait per model
     if verbose
         pb = ProgressMeter.Progress(length(model_fits); desc = "Extracting allele effects: ")
     end
-    for (i, model) in enumerate(models)
-        for (j, trait) in enumerate(traits)
-            for (k, population) in enumerate(vcat("bulk", populations))
-                # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
-                idx = ((((i - 1) * length(traits) + j) - 1) * (1 + length(populations))) + k
+    for model in models
+        for trait in traits
+            for population in vcat("bulk", populations)
+                # model = models[1]; trait = traits[1]; population = populations[2]
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
@@ -174,8 +170,8 @@ function fit(input::GBInput)::Vector{String}
                 else
                     model(genomes = Γ, phenomes = Φ, verbose = false)
                 end
-                model_fits[idx] = model_fit
-                fname_allele_effects_jld2s[idx] = writejld2(model_fits[idx], fname = fname_jld2)
+                push!(model_fits, model_fit)
+                push!(fname_allele_effects_jld2s, writejld2(model_fits[idx], fname = fname_jld2))
                 if verbose
                     ProgressMeter.next!(pb)
                 end
