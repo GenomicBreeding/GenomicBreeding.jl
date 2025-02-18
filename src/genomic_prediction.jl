@@ -129,8 +129,8 @@ function fit(input::GBInput)::Vector{String}
     # Load and merge the genomes and phenomes
     genomes, phenomes = load(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    populations = sort(unique(phenomes.populations))
-    traits = phenomes.traits
+    populations = input.populations
+    traits = input.traits
     model_fits::Vector{Fit} = fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
         (1 + length(populations)) * length(traits) * length(models),

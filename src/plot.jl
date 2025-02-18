@@ -35,6 +35,7 @@ function plot(;
     input::GBInput,
     skip_genomes::Bool = false,
     skip_phenomes::Bool = false,
+    skip_cv::Bool = false,
     format::String = "svg",
     plot_size::Tuple{Int64,Int64} = (600, 450),
     overwrite::Bool = false,
@@ -158,7 +159,7 @@ function plot(;
         end
     end
     # CVs
-    if !isnothing(fnames_cvs)
+    if !isnothing(fnames_cvs) && !skip_cv
         if overwrite
             try
                 rm(joinpath(plot_outdir, "cvs"), force = true, recursive = true)

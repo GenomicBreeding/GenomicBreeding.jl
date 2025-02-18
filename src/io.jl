@@ -715,7 +715,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 end
                 input_i = clone(input)
                 input_i.bulk_cv = bulk_cv
-                input_i.populations = population
+                input_i.populations = [population]
                 input_i.traits = [trait]
                 if input.analysis == predict
                     # Define the model as the filename of the tab-delimited allele effects table
