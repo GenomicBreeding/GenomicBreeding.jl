@@ -119,16 +119,20 @@ function plot(;
             if input.verbose
                 println(string("Genomes: ", plot_type))
             end
-            plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
-            append!(
-                fnames,
-                saveplots(
-                    plots,
-                    format = format,
-                    prefix = joinpath(plot_outdir, "genomes", string(plot_type)),
-                    overwrite = overwrite,
-                ),
-            )
+            try
+                plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
+                append!(
+                    fnames,
+                    saveplots(
+                        plots,
+                        format = format,
+                        prefix = joinpath(plot_outdir, "genomes", string(plot_type)),
+                        overwrite = overwrite,
+                    ),
+                )
+            catch
+                continue
+            end
         end
     end
     # Phenomes
@@ -137,16 +141,20 @@ function plot(;
             if input.verbose
                 println(string("Phenomes: ", plot_type))
             end
-            plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
-            append!(
-                fnames,
-                saveplots(
-                    plots,
-                    format = format,
-                    prefix = joinpath(plot_outdir, "phenomes", string(plot_type)),
-                    overwrite = overwrite,
-                ),
-            )
+            try
+                plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
+                append!(
+                    fnames,
+                    saveplots(
+                        plots,
+                        format = format,
+                        prefix = joinpath(plot_outdir, "phenomes", string(plot_type)),
+                        overwrite = overwrite,
+                    ),
+                )
+            catch
+                continue
+            end
         end
     end
     # CVs
@@ -168,16 +176,20 @@ function plot(;
             if input.verbose
                 println(string("Vector{CV}: ", plot_type))
             end
-            plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
-            append!(
-                fnames,
-                saveplots(
-                    plots,
-                    format = format,
-                    prefix = joinpath(plot_outdir, "cvs", string(plot_type)),
-                    overwrite = overwrite,
-                ),
-            )
+            try
+                plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
+                append!(
+                    fnames,
+                    saveplots(
+                        plots,
+                        format = format,
+                        prefix = joinpath(plot_outdir, "cvs", string(plot_type)),
+                        overwrite = overwrite,
+                    ),
+                )
+            catch
+                continue
+            end
         end
     end
     # Output directory

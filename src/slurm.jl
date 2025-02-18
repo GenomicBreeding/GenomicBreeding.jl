@@ -14,9 +14,11 @@ trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_har
 phenomes = extractphenomes(trials);
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
-input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=5, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="FlexiBLAS/3.0.4-GCC-11.2.0", fname_out_prefix="GBOutput/test-", verbose=false);
+
+# Repeated k-fold cross-validation
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=5, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
 outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
-run(`sh -c 'squeue'`)
+run(`sh -c 'squeue -u "\$USER"'`)
 run(`sh -c 'tail slurm-*_*.out'`)
 run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`)
 files = readdir(outdir); idx = findall(.!isnothing.(match.(Regex("jld2\$"), files))); fnames_cvs = joinpath.(outdir, files[idx])
@@ -24,27 +26,23 @@ cvs = [readjld2(CV, fname = fname) for fname in fnames_cvs]
 df_across_entries, df_per_entry = tabularise(cvs)
 sum(df_across_entries.model .== "bayesa") / nrow(df_across_entries)
 sum(df_across_entries.model .== "ridge") / nrow(df_across_entries)
+combine(groupby(df_across_entries, [:validation_population, :model]), :cor => mean)
+combine(groupby(df_across_entries, [:validation_population, :model]), :cor => length)
 
-for (i, cv) in enumerate(cvs)
-    # i = 80; cv = cvs[i]
-    if cv.fit.metrics == Dict("" => 0.0)
-        println(i)
-        break
-    end
-end
-
-
-
-input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="FlexiBLAS/3.0.4-GCC-11.2.0", fname_out_prefix="GBOutput/test-", verbose=false);
-
+# Genomic prediction equation full data fit
+input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
 outdir = submitslurmarrayjobs(input_fit);
+# GBOutput/run/GBInput-fit
+# files = readdir(joinpath(outdir, "run"))
+# idx = findall(.!isnothing.(match.(Regex("GBInput-fit"), files)))
+# rm.(joinpath.(outdir, "run", files[idx]))
 
 
+fname_allele_effects_jld2s = 
 
+input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
 
-input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="FlexiBLAS/3.0.4-GCC-11.2.0", fname_out_prefix="GBOutput/test-", verbose=false);
-
-input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="FlexiBLAS/3.0.4-GCC-11.2.0", fname_out_prefix="GBOutput/test-", verbose=false);
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
 
 outdir = submitslurmarrayjobs(input_cv)
 
@@ -125,7 +123,7 @@ function submitslurmarrayjobs(input::GBInput)::String
     n_array_jobs = length(inputs)
     for i = 1:n_array_jobs
         # i = 1
-        writejld2(inputs[i], fname = joinpath(run_outdir, string("GBInput-", i, ".jld2")))
+        writejld2(inputs[i], fname = joinpath(run_outdir, string("GBInput-", input.analysis, "-", i, ".jld2")))
     end
     # Save the Julia run file in the run directory
     julia_script = [
@@ -138,7 +136,13 @@ function submitslurmarrayjobs(input::GBInput)::String
         "using GenomicBreeding",
         "import GenomicBreeding: cv, fit, predict, gwas",
         "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml",
-        string("input = readjld2(GBInput, fname=joinpath(\"", run_outdir, "\", string(\"GBInput-\", i, \".jld2\")))"),
+        string(
+            "input = readjld2(GBInput, fname=joinpath(\"",
+            run_outdir,
+            "\", string(\"GBInput-\", ",
+            input.analysis,
+            ", \"-\", i, \".jld2\")))",
+        ),
         "display(input)",
         string("output = ", input.analysis, "(input)"),
         "display(output)",

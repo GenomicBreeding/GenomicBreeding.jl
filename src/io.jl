@@ -664,16 +664,6 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Load genomes and phenomes to check their validity and dimensions
     _genomes, phenomes = load(input)
-    # Count the number of models, traits, and populations
-    m = length(input.models)
-    t = length(phenomes.traits)
-    p = length(unique(phenomes.populations))
-    # Prepare the GBInputs
-    inputs = if p > 1
-        Vector{GBInput}(undef, m * t * (p + 2))
-    else
-        Vector{GBInput}(undef, m * t * p)
-    end
     # Define the model/s to use depending on the type of analysis requested
     models = if input.analysis ∈ [cv, fit]
         input.models
@@ -692,6 +682,16 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 join(string.(valid_analysis_functions), "\n\t‣ "),
             ),
         )
+    end
+    # Count the number of models, traits, and populations
+    m = length(models)
+    t = length(phenomes.traits)
+    p = length(unique(phenomes.populations))
+    # Prepare the GBInputs
+    inputs = if p > 1
+        Vector{GBInput}(undef, m * t * (p + 2))
+    else
+        Vector{GBInput}(undef, m * t * p)
     end
     # Define the GBInputs for Slurm job arrays or straightforward single computer jobs
     i = 1
@@ -741,10 +741,10 @@ Prepare the output prefix by replacing problematic strings in the prefix of the 
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
-julia> input = GBInput(fname_geno="some_dir/fname_geno.jld2", fname_pheno="some_dir/fname_pheno.jld2", fname_out_prefix="GBOutput/some@!_%&prefix-", verbose=false);
+julia> input = GBInput(fname_geno="some_dir/fname_geno.jld2", fname_pheno="some_dir/fname_pheno.jld2", fname_out_prefix="GBOutput/some@!_%&prefix", verbose=false);
 
 julia> fname_out_prefix = prepareoutprefixandoutdir(input)
-"GBOutput/some_____prefix-"
+"GBOutput/some_____prefix-cv-"
 
 julia> rm(dirname(fname_out_prefix), recursive=true);
 ```
@@ -760,7 +760,11 @@ function prepareoutprefixandoutdir(input::GBInput)::String
     end
     # Make sure we do not have any problematic symbols in the output filenames
     directory_name = dirname(input.fname_out_prefix)
-    prefix_name = basename(input.fname_out_prefix)
+    prefix_name = if input.fname_out_prefix[end] == '-'
+        string(basename(input.fname_out_prefix), input.analysis, "-")
+    else
+        string(basename(input.fname_out_prefix), "-", input.analysis, "-")
+    end
     problematic_strings::Vector{String} = [" ", "\n", "\t", "(", ")", "&", "|", ":", "=", "+", "*", "%", "@", "!"]
     for s in problematic_strings
         prefix_name = replace(prefix_name, s => "_")
