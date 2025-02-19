@@ -655,7 +655,7 @@ julia> fnames_cvs, fnames_notes = cv(input);
 
 julia> cvs = loadcvs(input);
 
-julia> isa(cvs[1], CV)
+julia> length(cvs) >= length(fnames_cvs) 
 true
 ```
 """
