@@ -688,13 +688,14 @@ function loadcvs(input::GBInput)::Vector{CV}
         )
     end
     fnames_cvs = joinpath.(directory_name, files[idx])
+    println(idx) 
     cvs = Vector{CV}(undef, length(fnames_cvs))
     for (i, fname) in enumerate(fnames_cvs)
         # i = 1; fname = fnames_cvs[i];
         try
-            cvs[i] = readjld2(CV, fname = fname);
+            cvs[i] = readjld2(CV, fname = fname)
         catch
-            println(fname) 
+            # println(fname) 
             continue
         end
     end
