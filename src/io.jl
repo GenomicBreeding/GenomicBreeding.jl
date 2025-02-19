@@ -653,9 +653,9 @@ julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populatio
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
-julia> cvs = loadcvs(input)
+julia> cvs = loadcvs(input);
 
-julia> length(cvs) == length(fnames_cvs)
+julia> isa(cvs[1], CV)
 true
 ```
 """
@@ -688,15 +688,15 @@ function loadcvs(input::GBInput)::Vector{CV}
         )
     end
     fnames_cvs = joinpath.(directory_name, files[idx])
-    println(idx) 
-    println(fnames_cvs) 
+    # println(idx) 
+    # println(fnames_cvs) 
     cvs = Vector{CV}(undef, length(fnames_cvs))
     for (i, fname) in enumerate(fnames_cvs)
         # i = 1; fname = fnames_cvs[i];
         try
             cvs[i] = readjld2(CV, fname = fname)
         catch
-            # println(fname) 
+            println(fname) 
             continue
         end
     end
