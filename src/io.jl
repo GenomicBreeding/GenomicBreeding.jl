@@ -689,6 +689,7 @@ function loadcvs(input::GBInput)::Vector{CV}
     end
     fnames_cvs = joinpath.(directory_name, files[idx])
     println(idx) 
+    println(fnames_cvs) 
     cvs = Vector{CV}(undef, length(fnames_cvs))
     for (i, fname) in enumerate(fnames_cvs)
         # i = 1; fname = fnames_cvs[i];
