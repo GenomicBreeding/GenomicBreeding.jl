@@ -653,7 +653,7 @@ julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populatio
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
-julia> cvs = loadcvs(input);
+julia> cvs = loadcvs(input)
 
 julia> length(cvs) == length(fnames_cvs)
 true
@@ -694,6 +694,7 @@ function loadcvs(input::GBInput)::Vector{CV}
         try
             cvs[i] = readjld2(CV, fname = fname)
         catch
+            println(fname) 
             continue
         end
     end
