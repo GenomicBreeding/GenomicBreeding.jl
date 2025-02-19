@@ -696,7 +696,7 @@ function loadcvs(input::GBInput)::Vector{CV}
         try
             cvs[i] = readjld2(CV, fname = fname)
         catch
-            println(fname) 
+            # println(fname) 
             continue
         end
     end
