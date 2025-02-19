@@ -655,7 +655,7 @@ julia> fnames_cvs, fnames_notes = cv(input);
 
 julia> cvs = loadcvs(input);
 
-julia> length(cvs) == 32
+julia> length(cvs) == length(fnames_cvs)
 true
 ```
 """
@@ -725,7 +725,7 @@ julia> input.fname_allele_effects_jld2s = GenomicBreeding.fit(input);
 
 julia> fits = loadfits(input);
 
-julia> length(fits) == 6
+julia> length(fits) == length(input.fname_allele_effects_jld2s)
 true
 ```
 """
