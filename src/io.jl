@@ -238,7 +238,7 @@ true
 ```
 """
 function clone(x::GBInput)::GBInput
-    # x = GBInput(fname_geno="", fname_pheno=""); x.fname_geno="test_geno.jld2"; x.fname_pheno = "test_pheno.tsv";
+    # x = GBInput(fname_geno=""); x.fname_geno="test_geno.jld2"; x.fname_pheno = "test_pheno.tsv";
     out = GBInput(fname_geno = "", fname_pheno = "")
     for field in fieldnames(typeof(x))
         # field = fieldnames(typeof(x))[1]
@@ -736,7 +736,11 @@ function loadfits(input::GBInput)::Vector{Fit}
     fits = Vector{Fit}(undef, length(input.fname_allele_effects_jld2s))
     for (i, fname) in enumerate(input.fname_allele_effects_jld2s)
         # i = 1; fname = fname_allele_effects_jld2s[i];
-        fits[i] = readjld2(Fit, fname = fname)
+        try
+            fits[i] = readjld2(Fit, fname = fname)
+        catch
+            continue
+        end
     end
     fits
 end
@@ -833,7 +837,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 if input.analysis == predict
                     # Define the model as the filename of the tab-delimited allele effects table
                     # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
-                    input_i.fname_allele_effects_tsv = [model]
+                    input_i.fname_allele_effects_jld2s = [model]
                     input_i.fname_pheno = ""
                 else
                     input_i.models = [model]

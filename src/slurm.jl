@@ -20,31 +20,31 @@ input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, 
 outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
 run(`sh -c 'squeue -u "\$USER"'`)
 run(`sh -c 'tail slurm-*_*.out'`)
-run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`)
-files = readdir(outdir); idx = findall(.!isnothing.(match.(Regex("jld2\$"), files))); fnames_cvs = joinpath.(outdir, files[idx])
-cvs = [readjld2(CV, fname = fname) for fname in fnames_cvs]
+run(`sh -c 'grep -i "err" slurm-*_*.out | grep -v "blas" | cut -d: -f1 | sort | uniq'`)
+cvs = loadcvs(input_cv)
 df_across_entries, df_per_entry = tabularise(cvs)
 sum(df_across_entries.model .== "bayesa") / nrow(df_across_entries)
 sum(df_across_entries.model .== "ridge") / nrow(df_across_entries)
-combine(groupby(df_across_entries, [:validation_population, :model]), :cor => mean)
-combine(groupby(df_across_entries, [:validation_population, :model]), :cor => length)
+sort(combine(groupby(df_across_entries, [:validation_population, :model]), [:cor => mean, :cor => length]), :cor_mean, rev=true)
 
 # Genomic prediction equation full data fit
-input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, SLURM_cpus_per_task=1, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
+input_fit = clone(input_cv)
+input_fit.analysis = fit
 outdir = submitslurmarrayjobs(input_fit);
 # GBOutput/run/GBInput-fit
 # files = readdir(joinpath(outdir, "run"))
 # idx = findall(.!isnothing.(match.(Regex("GBInput-fit"), files)))
 # rm.(joinpath.(outdir, "run", files[idx]))
 
+files = readdir(outdir)
+idx = findall(.!isnothing.(match.(Regex("-fit-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+input_fit.fname_allele_effects_jld2s = joinpath.(outdir, files[idx])
+fits = loadfits(input_fit)
+length(fits)
 
-fname_allele_effects_jld2s = 
-
-input_predict = GBInput(fname_geno=fname_geno, fname_allele_effects_jld2s=fname_allele_effects_jld2s analysis=predict, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
-
-input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=1, SLURM_mem_G=1, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
-
-outdir = submitslurmarrayjobs(input_cv)
+input_predict = clone(input_fit)
+input_predict.analysis = predict
+outdir = submitslurmarrayjobs(input_predict)
 
 run(`squeue`)
 ```

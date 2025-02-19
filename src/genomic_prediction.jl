@@ -150,8 +150,8 @@ function fit(input::GBInput)::Vector{String}
     end
     for model in models
         for trait in traits
-            for population in vcat("bulk", populations)
-                # model = models[1]; trait = traits[1]; population = populations[2]
+            for population in populations
+                # model = models[1]; trait = traits[1]; population = populations[1]
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
