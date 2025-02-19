@@ -36,11 +36,12 @@ function gwas(input::GBInput)::Vector{String}
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, traits=["trait_1"], gwas_models=[gwasols])
     # Parse input and prepare the output directory
     models = input.gwas_models
+    input.analysis = gwas
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
     fname_out_prefix = input.fname_out_prefix
     verbose = input.verbose
     # Load genomes and phenomes
-    genomes, phenomes = load(input)
+    genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
     populations = sort(unique(phenomes.populations))
     traits = phenomes.traits

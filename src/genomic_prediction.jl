@@ -18,7 +18,7 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
@@ -38,11 +38,12 @@ function cv(input::GBInput)::Tuple{Vector{String},Vector{String}}
     models = input.models
     n_folds = input.n_folds
     n_replications = input.n_replications
+    input.analysis = cv
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
     fname_out_prefix = input.fname_out_prefix
     verbose = input.verbose
     # Load genomes and phenomes
-    genomes, phenomes = load(input)
+    genomes, phenomes = loadgenomesphenomes(input)
     dim_genomes = dimensions(genomes)
     # List the cross-validation function/s to use
     cv_functions = if !bulk_cv && (dim_genomes["n_populations"] > 1)
@@ -104,7 +105,7 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> fname_allele_effects_jld2s = GenomicBreeding.fit(input);
 
@@ -121,15 +122,25 @@ function fit(input::GBInput)::Vector{String}
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Parse input and prepare the output directory
     models = input.models
-    populations = input.populations
-    traits = input.traits
     n_iter = input.n_iter
     n_burnin = input.n_burnin
+    input.analysis = fit
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
     fname_out_prefix = input.fname_out_prefix
     verbose = input.verbose
     # Load and merge the genomes and phenomes
-    genomes, phenomes = load(input)
+    genomes, phenomes = loadgenomesphenomes(input)
+    # Define the selection populations and traits
+    populations = if !isnothing(input.populations)
+        input.populations
+    else
+        sort(unique(phenomes.populations))
+    end
+    traits = if !isnothing(input.traits)
+        input.traits
+    else
+        sort(unique(phenomes.traits))
+    end
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
     model_fits::Vector{Fit} = []
     fname_allele_effects_jld2s::Vector{String} = []
@@ -171,7 +182,7 @@ function fit(input::GBInput)::Vector{String}
                     model(genomes = Γ, phenomes = Φ, verbose = false)
                 end
                 push!(model_fits, model_fit)
-                push!(fname_allele_effects_jld2s, writejld2(model_fits[idx], fname = fname_jld2))
+                push!(fname_allele_effects_jld2s, writejld2(model_fit, fname = fname_jld2))
                 if verbose
                     ProgressMeter.next!(pb)
                 end
@@ -198,10 +209,9 @@ function fit(input::GBInput)::Vector{String}
 end
 
 """
-    fit(input::GBInput)::Vector{String}
+    predict(input::GBInput)::String
 
-Extract allele effects by fitting the models without cross-validation.
-Generated JLD2 files each containing the Fit struct for each model-trait-population combination.
+Predict a Phenomes struct, i.e. trait values using the allele effects from `GenomicBreeding.fit(...)` and the input Genomes struct.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -217,9 +227,11 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, verbose=false);
 
 julia> input.fname_allele_effects_jld2s = GenomicBreeding.fit(input);
+
+julia> input.analysis = GenomicBreeding.predict;
 
 julia> fname_phenomes_predicted = GenomicBreeding.predict(input);
 
@@ -246,6 +258,7 @@ function predict(input::GBInput)::String
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # input.fname_allele_effects_jld2s = GenomicBreeding.fit(input)
     # Parse input and prepare the output directory
+    input.analysis = predict
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
     fname_out_prefix = input.fname_out_prefix
     fname_allele_effects_jld2s = input.fname_allele_effects_jld2s
@@ -259,7 +272,7 @@ function predict(input::GBInput)::String
         )
     end
     # Load and merge the genomes and dummy phenomes (as input.fname_pheno is empty, i.e. "")
-    genomes, _dummy_phenomes = load(input)
+    genomes, _dummy_phenomes = loadgenomesphenomes(input)
     # Instantiate the predicted Phenomes struct
     n = length(genomes.entries)
     t = length(fname_allele_effects_jld2s)
@@ -267,9 +280,9 @@ function predict(input::GBInput)::String
     phenomes_predicted.entries = genomes.entries
     phenomes_predicted.populations = genomes.populations
     # Populate the phenotypes matrix and the trait names vector
-    for (j, fname_jld2) in enumerate(fname_allele_effects_jld2s)
-        # j = 1; fname_jld2 = fname_allele_effects_jld2s[j]
-        model_fit = readjld2(Fit, fname = fname_jld2)
+    model_fits::Vector{Fit} = loadfits(input)
+    for (j, (fname_jld2, model_fit)) in enumerate(zip(fname_allele_effects_jld2s, model_fits))
+        # j = 1; fname_jld2 = fname_allele_effects_jld2s[j]; model_fit = model_fits[j];
         y_pred = GBModels.predict(fit = model_fit, genomes = genomes, idx_entries = collect(1:n))
         phenomes_predicted.phenotypes[:, j] = y_pred
         phenomes_predicted.traits[j] = replace(basename(fname_jld2), ".jld2" => "")

@@ -342,11 +342,13 @@ function checkinputs(input::GBInput)::Vector{String}
         if !isfile(input.fname_geno)
             push!(errors, string("The input genotype file `", input.fname_geno, "` does not exist."))
         end
-        if !isfile(input.fname_allele_effects_jld2s)
-            push!(
-                errors,
-                string("The input allele effects file `", input.fname_allele_effects_jld2s, "` does not exist."),
-            )
+        for fname in input.fname_allele_effects_jld2s
+            if !isfile(fname)
+                push!(
+                    errors,
+                    string("The input allele effects file `", input.fname_allele_effects_jld2s, "` does not exist."),
+                )
+            end
         end
     end
     return errors
@@ -354,7 +356,7 @@ end
 
 
 """
-    load(input::GBInput)::Tuple{Genomes, Phenomes}
+    loadgenomesphenomes(input::GBInput)::Tuple{Genomes, Phenomes}
 
 Load, merge and filter genotype and phenotype data
 
@@ -372,7 +374,7 @@ julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], verbose=false);
 
-julia> genomes, phenomes = load(input);
+julia> genomes, phenomes = loadgenomesphenomes(input);
 
 julia> length(unique(genomes.populations)) == length(unique(phenomes.populations)) == 2
 true
@@ -383,7 +385,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function load(input::GBInput)::Tuple{Genomes,Phenomes}
+function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -629,6 +631,114 @@ function load(input::GBInput)::Tuple{Genomes,Phenomes}
 end
 
 """
+    loadcvs(input::GBInput)::Vector{CV}
+
+Load CVs from repeated k-fold cross-validation
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+
+julia> fnames_cvs, fnames_notes = cv(input);
+
+julia> cvs = loadcvs(input);
+
+julia> length(cvs) == 32
+true
+```
+"""
+function loadcvs(input::GBInput)::Vector{CV}
+    directory_name = if dirname(input.fname_out_prefix) == ""
+        pwd()
+    else
+        dirname(input.fname_out_prefix)
+    end
+    if !isdir(directory_name)
+        throw(
+            ArgumentError(
+                "The output directory (`" *
+                directory_name *
+                "`) which should contain the output of `GenomicBreeding.cv(...)` does not exist. " *
+                "Have you run `submitslurmarrayjobs(...)` using an input with `analysis=cv`?",
+            ),
+        )
+    end
+    files = readdir(directory_name)
+    idx = findall(.!isnothing.(match.(Regex("-cv-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+    if length(idx) == 0
+        throw(
+            ArgumentError(
+                "The output directory (`" *
+                directory_name *
+                "`) does not contain the output of `GenomicBreeding.cv(...)`. " *
+                "Have you run `submitslurmarrayjobs(...)` using an input with `analysis=cv`?",
+            ),
+        )
+    end
+    fnames_cvs = joinpath.(directory_name, files[idx])
+    cvs = Vector{CV}(undef, length(fnames_cvs))
+    for (i, fname) in enumerate(fnames_cvs)
+        # i = 1; fname = fnames_cvs[i];
+        try
+            cvs[i] = readjld2(CV, fname = fname)
+        catch
+            continue
+        end
+    end
+    cvs
+end
+
+"""
+    loadfits(input::GBInput)::Vector{Fit}
+
+Load Fits, i.e. estimates of allele frequency effects from genomic prediction model fittings
+
+# Example
+```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
+
+julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], models=[bayesa, bayesb], verbose=false);
+
+julia> input.fname_allele_effects_jld2s = GenomicBreeding.fit(input);
+
+julia> fits = loadfits(input);
+
+julia> length(fits) == 6
+true
+```
+"""
+function loadfits(input::GBInput)::Vector{Fit}
+    fits = Vector{Fit}(undef, length(input.fname_allele_effects_jld2s))
+    for (i, fname) in enumerate(input.fname_allele_effects_jld2s)
+        # i = 1; fname = fname_allele_effects_jld2s[i];
+        fits[i] = readjld2(Fit, fname = fname)
+    end
+    fits
+end
+
+"""
     prepareinputs(input::GBInput)::Vector{GBInput}
 
 Prepare GBInputs for Slurm array jobs
@@ -663,7 +773,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Load genomes and phenomes to check their validity and dimensions
-    _genomes, phenomes = load(input)
+    _genomes, phenomes = loadgenomesphenomes(input)
     # Define the model/s to use depending on the type of analysis requested
     models = if input.analysis ∈ [cv, fit]
         input.models
@@ -672,7 +782,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     elseif input.analysis ∈ [gwas]
         input.gwas_models
     else
-        # Should be alreat checked in load(...) which calls checkinputs(..)
+        # Should be alreat checked in loadgenomesphenomes(...) which calls checkinputs(..)
         valid_analysis_functions = [cv, fit, predict, gwas]
         throw(
             ArgumentError(
@@ -706,7 +816,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
             end
             for population in populations
                 # population = populations[1]
-                bulk_cv, population = if population == "BULK_CV"
+                bulk_cv, pops_i = if population == "BULK_CV"
                     true, nothing
                 elseif population == "ACROSS_POP_CV"
                     false, populations[3:end]
@@ -715,7 +825,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 end
                 input_i = clone(input)
                 input_i.bulk_cv = bulk_cv
-                input_i.populations = [population]
+                input_i.populations = pops_i
                 input_i.traits = [trait]
                 if input.analysis == predict
                     # Define the model as the filename of the tab-delimited allele effects table

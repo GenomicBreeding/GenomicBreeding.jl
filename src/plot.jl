@@ -35,7 +35,7 @@ function plot(;
     input::GBInput,
     skip_genomes::Bool = false,
     skip_phenomes::Bool = false,
-    skip_cv::Bool = false,
+    skip_cvs::Bool = false,
     format::String = "svg",
     plot_size::Tuple{Int64,Int64} = (600, 450),
     overwrite::Bool = false,
@@ -49,35 +49,36 @@ function plot(;
     # fname_geno = "test-geno.tsv"; fname_pheno = "test-pheno.tsv"; outdir = "GBOutput"
     # input=GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, SLURM_cpus_per_task=6, SLURM_mem_G=5)
     # input.fname_out_prefix = replace(input.fname_out_prefix, dirname(input.fname_out_prefix) => outdir)
+    # skip_genomes = false; skip_phenomes = false; skip_cvs = false;
     # format = "svg"
-    # Load genomes and phenomes
+    # plot_size = (600, 450); overwrite = true;
+    # Load genomes, phenomes, and cvs
     genomes, phenomes = if !skip_genomes || !skip_phenomes
-        load(input)
+        loadgenomesphenomes(input)
     else
         nothing, nothing
     end
-    # Define output directory of the CVs
+    cvs = if !skip_cvs
+        try
+            loadcvs(input)
+        catch
+            nothing
+        end
+    else
+        nothing
+    end
+    # Define output directory of the plots
     directory_name = if dirname(input.fname_out_prefix) == ""
         pwd()
     else
         dirname(input.fname_out_prefix)
     end
-    fnames_cvs = if isdir(directory_name)
-        files = readdir(directory_name)
-        idx = findall(.!isnothing.(match.(Regex("jld2\$"), files)))
-        fnames_cvs = if length(idx) > 0
-            joinpath.(directory_name, files[idx])
-        else
-            nothing
-        end
-        fnames_cvs
-    else
+    if !isdir(directory_name)
         try
             mkdir(directory_name)
         catch
             throw(ArgumentError("Error creating the output directory: `" * directory_name * "`"))
         end
-        nothing
     end
     # Prepare the main directory for the output plots
     plot_outdir = joinpath(directory_name, "plots")
@@ -95,7 +96,7 @@ function plot(;
     if skip_phenomes
         subdir_names = subdir_names[subdir_names.!="phenomes"]
     end
-    if isnothing(fnames_cvs)
+    if skip_cvs
         subdir_names = subdir_names[subdir_names.!="cvs"]
     end
     for subdir_name in subdir_names
@@ -159,7 +160,7 @@ function plot(;
         end
     end
     # CVs
-    if !isnothing(fnames_cvs) && !skip_cv
+    if !skip_cvs && !isnothing(cvs)
         if overwrite
             try
                 rm(joinpath(plot_outdir, "cvs"), force = true, recursive = true)
@@ -167,11 +168,6 @@ function plot(;
             catch
                 throw(ArgumentError("Error overwriting the output directory: `" * joinpath(plot_outdir, "cvs") * "`"))
             end
-        end
-        cvs = Vector{CV}(undef, length(fnames_cvs))
-        for (i, fname) in enumerate(fnames_cvs)
-            # i = 1; fname = fnames_cvs[i];
-            cvs[i] = readjld2(CV, fname = fname)
         end
         for plot_type in [BarPlots, BoxPlots]
             if input.verbose
@@ -197,7 +193,13 @@ function plot(;
     if input.verbose
         if length(fnames) > 0
             println(string("Please find output plots in: `", plot_outdir, "`"))
-            println(fnames)
+            idx_main_plots = findall(
+                .!isnothing.(match.(Regex("PCBiPlots"), fnames)) .||
+                .!isnothing.(
+                    match.(Regex("BarPlots-Within_population.x.trait.y.cor.z.validation_population.subset."), fnames)
+                ),
+            )
+            println("Please find the following main plots:\n\t‣ " * join(fnames[idx_main_plots], "\n\t‣ "))
         else
             println(string("No plots have been generated. The Slurm jobs may still be running."))
         end
