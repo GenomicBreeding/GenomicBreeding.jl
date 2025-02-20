@@ -45,10 +45,20 @@ function gwas(input::GBInput)::Vector{String}
     # Load genomes and phenomes
     genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    model_fits::Vector{Fit} = if isnothing(populations)
+    model_fits::Vector{Fit} = if isnothing(populations) && isnothing(traits)
+        fill(
+        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
+        length(models),
+    )
+    elseif isnothing(populations)
         fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
         length(traits) * length(models),
+    )
+    elseif isnothing(traits)
+        fill(
+        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
+        length(populations) * length(models),
     )
     else
         fill(
