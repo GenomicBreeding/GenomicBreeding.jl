@@ -45,27 +45,16 @@ function gwas(input::GBInput)::Vector{String}
     # Load genomes and phenomes
     genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    model_fits::Vector{Fit} = if isnothing(populations) && isnothing(traits)
-        fill(
-        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
-        length(models),
-    )
-    elseif isnothing(populations)
-        fill(
-        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
-        length(traits) * length(models),
-    )
-    elseif isnothing(traits)
-        fill(
-        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
-        length(populations) * length(models),
-    )
-    else
-        fill(
+    if isnothing(populations)
+        populations = [nothing] 
+    end
+    if isnothing(traits)
+        traits = [nothing] 
+    end
+    model_fits::Vector{Fit} = fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
         length(populations) * length(traits) * length(models),
     )
-    end
     fname_test_statistics_jld2s::Vector{String} = fill("", length(model_fits))
     # Fit the entire data to extract effects per trait per model
     if verbose
@@ -73,13 +62,9 @@ function gwas(input::GBInput)::Vector{String}
     end
     for (i, model) in enumerate(models)
         for (j, trait) in enumerate(traits)
-            for (k, population) in populations
+            for (k, population) in enumerate(populations) 
                 # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
-                idx = if isnothing(populations) 
-                ((((i - 1) * length(traits) + j) - 1)) + k
-                else
-                ((((i - 1) * length(traits) + j) - 1) * length(populations)) + k
-                end
+                idx = ((((i - 1) * length(traits) + j) - 1) * length(populations)) + k
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
