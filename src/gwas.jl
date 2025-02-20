@@ -35,6 +35,8 @@ function gwas(input::GBInput)::Vector{String}
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, traits=["trait_1"], gwas_models=[gwasols])
     # Parse input and prepare the output directory
+    populations = input.populations
+    traits = input.traits
     models = input.gwas_models
     input.analysis = gwas
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
@@ -43,8 +45,6 @@ function gwas(input::GBInput)::Vector{String}
     # Load genomes and phenomes
     genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    populations = sort(unique(phenomes.populations))
-    traits = phenomes.traits
     model_fits::Vector{Fit} = fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
         (1 + length(populations)) * length(traits) * length(models),
