@@ -45,10 +45,17 @@ function gwas(input::GBInput)::Vector{String}
     # Load genomes and phenomes
     genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
-    model_fits::Vector{Fit} = fill(
+    model_fits::Vector{Fit} = if isnothing(populations)
+        fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
-        (1 + length(populations)) * length(traits) * length(models),
+        length(traits) * length(models),
     )
+    else
+        fill(
+        Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
+        length(populations) * length(traits) * length(models),
+    )
+    end
     fname_test_statistics_jld2s::Vector{String} = fill("", (1 + length(populations)) * length(traits) * length(models))
     # Fit the entire data to extract effects per trait per model
     if verbose
@@ -58,7 +65,11 @@ function gwas(input::GBInput)::Vector{String}
         for (j, trait) in enumerate(traits)
             for (k, population) in populations
                 # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
-                idx = ((((i - 1) * length(traits) + j) - 1) * (1 + length(populations))) + k
+                idx = if isnothing(populations) 
+                ((((i - 1) * length(traits) + j) - 1)) + k
+                else
+                ((((i - 1) * length(traits) + j) - 1) * l ength(populations)) + k
+                end
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
