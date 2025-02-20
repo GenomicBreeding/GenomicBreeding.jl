@@ -170,7 +170,7 @@ function fit(input::GBInput)::Vector{String}
                         ),
                     )
                 end
-                Γ, Φ = if population == "bulk"
+                Γ, Φ = if isnothing(population)
                     (genomes, phenomes)
                 else
                     idx_entries = findall(genomes.populations .== population)

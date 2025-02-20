@@ -237,7 +237,7 @@ julia> input == copy_input
 true
 ```
 """
-function clone(x::GBInput)::GBInput
+function GBCore.clone(x::GBInput)::GBInput
     # x = GBInput(fname_geno=""); x.fname_geno="test_geno.jld2"; x.fname_pheno = "test_pheno.tsv";
     out = GBInput(fname_geno = "", fname_pheno = "")
     for field in fieldnames(typeof(x))
@@ -762,11 +762,25 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
     
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, verbose=false);
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, verbose=false);
 
-julia> inputs = prepareinputs(input);
+julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, verbose=false);
 
-julia> length(inputs) == 30
+julia> input_gwas = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=gwas, verbose=false);
+
+julia> inputs_cv = prepareinputs(input_cv);
+
+julia> inputs_fit = prepareinputs(input_fit);
+
+julia> inputs_gwas = prepareinputs(input_gwas);
+
+julia> length(inputs_cv) == 30
+true
+
+julia> length(inputs_fit) == 24
+true
+
+julia> length(inputs_gwas) == 24
 true
 
 julia> rm.([fname_geno, fname_pheno]);
@@ -782,12 +796,12 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # Load genomes and phenomes to check their validity and dimensions
     _genomes, phenomes = loadgenomesphenomes(input)
     # Define the model/s to use depending on the type of analysis requested
-    models = if input.analysis ∈ [cv, fit]
-        input.models
+    models, traits = if input.analysis ∈ [cv, fit]
+        input.models, phenomes.traits
     elseif input.analysis ∈ [predict]
-        input.fname_allele_effects_jld2s
+        input.fname_allele_effects_jld2s, [""]
     elseif input.analysis ∈ [gwas]
-        input.gwas_models
+        input.gwas_models, phenomes.traits
     else
         # Should be alreat checked in loadgenomesphenomes(...) which calls checkinputs(..)
         valid_analysis_functions = [cv, fit, predict, gwas]
@@ -802,11 +816,13 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     end
     # Count the number of models, traits, and populations
     m = length(models)
-    t = length(phenomes.traits)
+    t = length(traits)
     p = length(unique(phenomes.populations))
     # Prepare the GBInputs
-    inputs = if p > 1
+    inputs = if (p > 1) && (input.analysis ∈ [cv])
         Vector{GBInput}(undef, m * t * (p + 2))
+    elseif (p > 1) && (input.analysis ∈ [fit, gwas])
+        Vector{GBInput}(undef, m * t * (p + 1))
     else
         Vector{GBInput}(undef, m * t * p)
     end
@@ -814,10 +830,12 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     i = 1
     for model in models
         # model = models[1]
-        for trait in phenomes.traits
-            # trait = phenomes.traits[1]
-            populations = if p > 1
+        for trait in traits
+            # trait = traits[1]
+            populations = if (p > 1) && (input.analysis ∈ [cv])
                 vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
+            elseif (p > 1) && (input.analysis ∈ [fit, gwas])
+                vcat("BULK_CV", sort(unique(phenomes.populations)))
             else
                 sort(unique(phenomes.populations))
             end

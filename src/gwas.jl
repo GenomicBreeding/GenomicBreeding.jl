@@ -56,7 +56,7 @@ function gwas(input::GBInput)::Vector{String}
     end
     for (i, model) in enumerate(models)
         for (j, trait) in enumerate(traits)
-            for (k, population) in enumerate(vcat("bulk", populations))
+            for (k, population) in populations
                 # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
                 idx = ((((i - 1) * length(traits) + j) - 1) * (1 + length(populations))) + k
                 if verbose
@@ -77,7 +77,7 @@ function gwas(input::GBInput)::Vector{String}
                         ),
                     )
                 end
-                Γ, Φ = if population == "bulk"
+                Γ, Φ = if isnothing(population)
                     (genomes, phenomes)
                 else
                     idx_entries = findall(genomes.populations .== population)
