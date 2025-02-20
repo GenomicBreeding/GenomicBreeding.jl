@@ -649,13 +649,13 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, fname_out_prefix="GBOutput_cv_1/output-1-", populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
 julia> cvs = loadcvs(input);
 
-julia> isa(cvs[1], CV)
+julia> length(cvs) == length(fnames_cvs)
 true
 ```
 """
@@ -722,7 +722,7 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], models=[bayesa, bayesb], verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, fname_out_prefix="GBOutput_fit_2/output-2-", populations=["pop_1", "pop_3"], traits=["trait_1"], models=[bayesa, bayesb], verbose=false);
 
 julia> input.fname_allele_effects_jld2s = GenomicBreeding.fit(input);
 

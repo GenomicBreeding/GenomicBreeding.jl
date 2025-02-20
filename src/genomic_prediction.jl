@@ -18,7 +18,7 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, fname_out_prefix="GBOutput_cv_3/output-3-", populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
@@ -105,11 +105,11 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, fname_out_prefix="GBOutput_fit_4/output-4-", populations=["pop_1", "pop_3"], traits=["trait_1"], models=[bayesa, bayesb], verbose=false);
 
 julia> fname_allele_effects_jld2s = GenomicBreeding.fit(input);
 
-julia> length(fname_allele_effects_jld2s) == 6
+julia> length(fname_allele_effects_jld2s) == 4
 true
 ```
 """
@@ -227,7 +227,7 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, fname_out_prefix="GBOutput_predict_5/output-5-", analysis=GenomicBreeding.fit, verbose=false);
 
 julia> input.fname_allele_effects_jld2s = GenomicBreeding.fit(input);
 
@@ -239,11 +239,11 @@ julia> phenomes_predicted = readjld2(Phenomes, fname=fname_phenomes_predicted);
 
 julia> dimensions(phenomes_predicted)
 Dict{String, Int64} with 8 entries:
-  "n_total"       => 7200
+  "n_total"       => 5400
   "n_zeroes"      => 0
   "n_nan"         => 0
   "n_entries"     => 300
-  "n_traits"      => 24
+  "n_traits"      => 18
   "n_inf"         => 0
   "n_populations" => 3
   "n_missing"     => 0
