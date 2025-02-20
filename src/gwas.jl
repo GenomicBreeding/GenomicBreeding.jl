@@ -46,7 +46,7 @@ function gwas(input::GBInput)::Vector{String}
     genomes, phenomes = loadgenomesphenomes(input)
     # Instantiate the vector of dataframes and output vector of the resulting filenames where the dataframes will be written into
     if isnothing(populations)
-        populations = [nothing] 
+        populations = [nothing]
     end
     if isnothing(traits)
         traits = phenomes.traits
@@ -62,7 +62,7 @@ function gwas(input::GBInput)::Vector{String}
     end
     for (i, model) in enumerate(models)
         for (j, trait) in enumerate(traits)
-            for (k, population) in enumerate(populations) 
+            for (k, population) in enumerate(populations)
                 # i = 1; model = models[i]; j = 1; trait = traits[j]; k = 1; population = populations[k]
                 idx = ((((i - 1) * length(traits) + j) - 1) * length(populations)) + k
                 if verbose
@@ -87,7 +87,10 @@ function gwas(input::GBInput)::Vector{String}
                     (genomes, slice(phenomes, idx_traits = [j]))
                 else
                     idx_entries = findall(genomes.populations .== population)
-                    (slice(genomes, idx_entries = idx_entries), slice(phenomes, idx_entries = idx_entries, idx_traits = [j]))
+                    (
+                        slice(genomes, idx_entries = idx_entries),
+                        slice(phenomes, idx_entries = idx_entries, idx_traits = [j]),
+                    )
                 end
                 model_fit = model(genomes = Γ, phenomes = Φ, verbose = false)
                 model_fits[idx] = model_fit

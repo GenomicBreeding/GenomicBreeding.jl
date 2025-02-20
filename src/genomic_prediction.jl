@@ -133,8 +133,10 @@ function fit(input::GBInput)::Vector{String}
     # Define the selection populations and traits
     populations = if !isnothing(input.populations)
         input.populations
-    else
+    elseif !input.bulk_cv
         sort(unique(phenomes.populations))
+    else
+        [nothing]
     end
     traits = if !isnothing(input.traits)
         input.traits
@@ -156,8 +158,11 @@ function fit(input::GBInput)::Vector{String}
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
                 end
                 # Make sure the output filenames are not problematic by replacing some symbols into underscores
-                fname_jld2 =
+                fname_jld2 = if isnothing(population)
+                    string(fname_out_prefix, "model_", model, "-trait_", trait, "-population_bulk.jld2")
+                else
                     string(fname_out_prefix, "model_", model, "-trait_", trait, "-population_", population, ".jld2")
+                end
                 problematic_strings::Vector{String} =
                     [" ", "\n", "\t", "(", ")", "&", "|", ":", "=", "+", "*", "%", "@", "!"]
                 for s in problematic_strings
