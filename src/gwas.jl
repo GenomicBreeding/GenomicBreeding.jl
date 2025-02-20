@@ -68,7 +68,7 @@ function gwas(input::GBInput)::Vector{String}
                 idx = if isnothing(populations) 
                 ((((i - 1) * length(traits) + j) - 1)) + k
                 else
-                ((((i - 1) * length(traits) + j) - 1) * l ength(populations)) + k
+                ((((i - 1) * length(traits) + j) - 1) * length(populations)) + k
                 end
                 if verbose
                     println(string("Model: ", model, "| Trait: ", trait, "| Population: ", population))
