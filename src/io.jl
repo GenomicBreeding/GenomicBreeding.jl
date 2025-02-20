@@ -762,11 +762,11 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
     
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, verbose=false);
+julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.cv, verbose=false);
 
-julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=fit, verbose=false);
+julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, verbose=false);
 
-julia> input_gwas = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=gwas, verbose=false);
+julia> input_gwas = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.gwas, verbose=false);
 
 julia> inputs_cv = prepareinputs(input_cv);
 
