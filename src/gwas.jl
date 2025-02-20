@@ -23,7 +23,7 @@ julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, gwas_mode
 
 julia> fname_test_statistics_jld2s = GenomicBreeding.gwas(input);
 
-julia> length(fname_test_statistics_jld2s) == 12
+julia> length(fname_test_statistics_jld2s) == 3
 true
 ```
 """
@@ -49,7 +49,7 @@ function gwas(input::GBInput)::Vector{String}
         populations = [nothing] 
     end
     if isnothing(traits)
-        traits = [nothing] 
+        traits = phenomes.traits
     end
     model_fits::Vector{Fit} = fill(
         Fit(n = length(genomes.entries), l = length(genomes.loci_alleles)),
@@ -84,10 +84,10 @@ function gwas(input::GBInput)::Vector{String}
                     )
                 end
                 Γ, Φ = if isnothing(population)
-                    (genomes, phenomes)
+                    (genomes, slice(phenomes, idx_traits = [j]))
                 else
                     idx_entries = findall(genomes.populations .== population)
-                    (slice(genomes, idx_entries = idx_entries), slice(phenomes, idx_entries = idx_entries))
+                    (slice(genomes, idx_entries = idx_entries), slice(phenomes, idx_entries = idx_entries, idx_traits = [j]))
                 end
                 model_fit = model(genomes = Γ, phenomes = Φ, verbose = false)
                 model_fits[idx] = model_fit
