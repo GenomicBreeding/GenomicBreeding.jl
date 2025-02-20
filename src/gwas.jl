@@ -66,7 +66,7 @@ function gwas(input::GBInput)::Vector{String}
         length(populations) * length(traits) * length(models),
     )
     end
-    fname_test_statistics_jld2s::Vector{String} = fill("", (1 + length(populations)) * length(traits) * length(models))
+    fname_test_statistics_jld2s::Vector{String} = fill("", length(model_fits))
     # Fit the entire data to extract effects per trait per model
     if verbose
         pb = ProgressMeter.Progress(length(model_fits); desc = "Performing GWAS: ")
