@@ -752,7 +752,7 @@ Prepare GBInputs for Slurm array jobs
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
-julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
 julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 
@@ -766,13 +766,17 @@ julia> input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analys
 
 julia> input_fit = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fit, verbose=false);
 
+julia> input_predict = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, fname_allele_effects_jld2s=["dummy.jld2"], analysis=GenomicBreeding.predict, verbose=false); writejld2(Fit(n=1, l=1), fname="dummy.jld2");
+
 julia> input_gwas = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.gwas, verbose=false);
 
-julia> inputs_cv = prepareinputs(input_cv);
+julia> inputs_cv = prepareinputs(input_cv); # expect 30 GBInputs = 2 models x 3 traits x (3 populations + 1 bulk + 1 across pops)
 
-julia> inputs_fit = prepareinputs(input_fit);
+julia> inputs_fit = prepareinputs(input_fit); # expect 24 GBInputs = 2 models x 3 traits x (3 populations + 1 bulk)
 
-julia> inputs_gwas = prepareinputs(input_gwas);
+julia> inputs_predict = prepareinputs(input_predict); # expect 1 GBInput = 1 dummy Fit struct
+
+julia> inputs_gwas = prepareinputs(input_gwas); # expect 24 GBInputs = 1 models x 3 traits x (3 populations + 1 bulk)
 
 julia> length(inputs_cv) == 30
 true
@@ -780,10 +784,13 @@ true
 julia> length(inputs_fit) == 24
 true
 
+julia> length(inputs_predict) == 1
+true
+
 julia> length(inputs_gwas) == 24
 true
 
-julia> rm.([fname_geno, fname_pheno]);
+julia> rm.([fname_geno, fname_pheno, "dummy.jld2"]);
 ```
 """
 function prepareinputs(input::GBInput)::Vector{GBInput}
@@ -818,11 +825,23 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     m = length(models)
     t = length(traits)
     p = length(unique(phenomes.populations))
+    # Extract the populations
+    populations = if (p > 1) && (input.analysis ∈ [cv])
+        vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
+    elseif (p > 1) && (input.analysis ∈ [fit, gwas])
+        vcat("BULK_CV", sort(unique(phenomes.populations)))
+    elseif input.analysis ∈ [predict]
+        [nothing]
+    else
+        sort(unique(phenomes.populations))
+    end
     # Prepare the GBInputs
     inputs = if (p > 1) && (input.analysis ∈ [cv])
         Vector{GBInput}(undef, m * t * (p + 2))
     elseif (p > 1) && (input.analysis ∈ [fit, gwas])
         Vector{GBInput}(undef, m * t * (p + 1))
+    elseif input.analysis ∈ [predict]
+        Vector{GBInput}(undef, m * t)
     else
         Vector{GBInput}(undef, m * t * p)
     end
@@ -832,16 +851,9 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
         # model = models[1]
         for trait in traits
             # trait = traits[1]
-            populations = if (p > 1) && (input.analysis ∈ [cv])
-                vcat("BULK_CV", "ACROSS_POP_CV", sort(unique(phenomes.populations)))
-            elseif (p > 1) && (input.analysis ∈ [fit, gwas])
-                vcat("BULK_CV", sort(unique(phenomes.populations)))
-            else
-                sort(unique(phenomes.populations))
-            end
             for population in populations
                 # population = populations[1]
-                bulk_cv, pops_i = if population == "BULK_CV"
+                bulk_cv, pops_i = if (population == "BULK_CV") || isnothing(population)
                     true, nothing
                 elseif population == "ACROSS_POP_CV"
                     false, populations[3:end]
@@ -852,7 +864,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 input_i.bulk_cv = bulk_cv
                 input_i.populations = pops_i
                 input_i.traits = [trait]
-                if input.analysis == predict
+                if input.analysis ∈ [predict]
                     # Define the model as the filename of the tab-delimited allele effects table
                     # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
                     input_i.fname_allele_effects_jld2s = [model]

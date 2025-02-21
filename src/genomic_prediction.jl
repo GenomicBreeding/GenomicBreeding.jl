@@ -288,6 +288,7 @@ function predict(input::GBInput)::String
     model_fits::Vector{Fit} = loadfits(input)
     for (j, (fname_jld2, model_fit)) in enumerate(zip(fname_allele_effects_jld2s, model_fits))
         # j = 1; fname_jld2 = fname_allele_effects_jld2s[j]; model_fit = model_fits[j];
+        # println(j)
         y_pred = GBModels.predict(fit = model_fit, genomes = genomes, idx_entries = collect(1:n))
         phenomes_predicted.phenotypes[:, j] = y_pred
         phenomes_predicted.traits[j] = replace(basename(fname_jld2), ".jld2" => "")
