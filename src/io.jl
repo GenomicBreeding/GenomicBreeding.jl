@@ -487,7 +487,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
     else
         populations
     end
-    traits = if isnothing(traits)
+    traits = if isnothing(traits) || (traits == [""])
         sort(phenomes.traits)
     else
         traits
@@ -806,7 +806,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     models, traits = if input.analysis ∈ [cv, fit]
         input.models, phenomes.traits
     elseif input.analysis ∈ [predict]
-        input.fname_allele_effects_jld2s, [""]
+        input.fname_allele_effects_jld2s, [nothing]
     elseif input.analysis ∈ [gwas]
         input.gwas_models, phenomes.traits
     else
@@ -917,13 +917,6 @@ function prepareoutprefixandoutdir(input::GBInput)::String
         prefix_name = replace(prefix_name, s => "_")
     end
     fname_out_prefix = if input.fname_out_prefix != joinpath(directory_name, prefix_name)
-        if input.verbose
-            @warn "Modifying the user defined `input.fname_out_prefix` as it contains problematic symbols, i.e. from `" *
-                  input.fname_out_prefix *
-                  "` into `" *
-                  joinpath(directory_name, prefix_name) *
-                  "`."
-        end
         joinpath(directory_name, prefix_name)
     else
         input.fname_out_prefix

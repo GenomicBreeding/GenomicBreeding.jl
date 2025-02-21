@@ -31,14 +31,11 @@ sort(combine(groupby(df_across_entries, [:validation_population, :model]), [:cor
 input_fit = clone(input_cv)
 input_fit.analysis = fit
 outdir = submitslurmarrayjobs(input_fit);
-# GBOutput/run/GBInput-fit
-# files = readdir(joinpath(outdir, "run"))
-# idx = findall(.!isnothing.(match.(Regex("GBInput-fit"), files)))
-# rm.(joinpath.(outdir, "run", files[idx]))
-
-files = readdir(outdir)
-idx = findall(.!isnothing.(match.(Regex("-fit-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
-input_fit.fname_allele_effects_jld2s = joinpath.(outdir, files[idx])
+input_fit.fname_allele_effects_jld2s = begin
+    files = readdir(outdir)
+    idx = findall(.!isnothing.(match.(Regex("-fit-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+    joinpath.(outdir, files[idx])
+end
 fits = loadfits(input_fit)
 length(fits)
 
