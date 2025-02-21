@@ -863,7 +863,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 input_i = clone(input)
                 input_i.bulk_cv = bulk_cv
                 input_i.populations = pops_i
-                input_i.traits = [trait]
+                input_i.traits = isnothing(trait) ? nothing : [trait]
                 if input.analysis ∈ [predict]
                     # Define the model as the filename of the tab-delimited allele effects table
                     # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
