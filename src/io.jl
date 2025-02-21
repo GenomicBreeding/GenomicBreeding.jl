@@ -867,8 +867,10 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 if input.analysis ∈ [predict]
                     # Define the model as the filename of the tab-delimited allele effects table
                     # Also set the phenotype file as empty so that we don't merge with a phenomes struct with incomplete correspondence with the genomes struct
+                    # Additionally, set the minimum allele frequency to zero so that we don't omit any loci which may have effects in th Fit structs
                     input_i.fname_allele_effects_jld2s = [model]
                     input_i.fname_pheno = ""
+                    input_i.maf = 0.0
                 else
                     input_i.models = [model]
                 end
