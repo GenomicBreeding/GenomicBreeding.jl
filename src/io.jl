@@ -843,17 +843,8 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
         sort(unique(phenomes.populations))
     end
     # Prepare the GBInputs
-    inputs = if (p > 1) && (input.analysis ∈ [cv])
-        Vector{GBInput}(undef, m * t * (p + 2))
-    elseif (p > 1) && (input.analysis ∈ [fit, gwas])
-        Vector{GBInput}(undef, m * t * (p + 1))
-    elseif input.analysis ∈ [predict]
-        Vector{GBInput}(undef, m * t)
-    else
-        Vector{GBInput}(undef, m * t * p)
-    end
+    inputs::Vector{GBInput} = []
     # Define the GBInputs for Slurm job arrays or straightforward single computer jobs
-    i = 1
     for model in models
         # model = models[1]
         for trait in traits
@@ -885,8 +876,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
                 else
                     input_i.models = [model]
                 end
-                inputs[i] = input_i
-                i += 1
+                push!(inputs, input_i)
             end
         end
     end
