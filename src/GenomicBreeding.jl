@@ -30,7 +30,7 @@ export validate, cvmultithread!, cvbulk
 export cvperpopulation, cvpairwisepopulation, cvleaveonepopulationout
 
 using GBPlots
-export PlotsGB, DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots
+export PlotsGB, DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots, BarPlots, BoxPlots, PCBiPlots
 export checkdims, labeltofname, saveplots
 
 using StatsBase, DataFrames, Dates

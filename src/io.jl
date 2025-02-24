@@ -374,7 +374,7 @@ julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch
 
 julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, populations=["pop_1", "pop_3"], traits=["trait_1"], verbose=false);
 
-julia> genomes, phenomes = loadgenomesphenomes(input);
+julia> genomes, phenomes, traits_to_skip, populations_to_skip = loadgenomesphenomes(input);
 
 julia> length(unique(genomes.populations)) == length(unique(phenomes.populations)) == 2
 true
@@ -385,7 +385,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
+function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes, Vector{String}, Vector{String}}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -553,6 +553,9 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
         end
         phenomes = slice(phenomes, idx_traits = idx_traits)
     end
+    # Trait-population combinations to skip
+    traits_to_skip::Vector{String} = []
+    populations_to_skip::Vector{String} = []
     # Check if we have enough entries per fold
     if !bulk_cv && (length(unique(phenomes.populations)) > 1)
         # Per trait per population, is we do not wish bulk CV and we have more than 1 population
@@ -562,19 +565,21 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
                 y = phenomes.phenotypes[phenomes.populations.==population, phenomes.traits.==trait][:, 1]
                 y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
                 if ceil(length(y) / n_folds) < 5
-                    throw(
-                        ArgumentError(
-                            "The numer of entries in population: `" *
-                            population *
-                            "` (n=" *
-                            string(length(y)) *
-                            ") results in less than 5 entries per " *
-                            string(n_folds) *
-                            "-fold cross-validation. " *
-                            "Please consider reducing the number of " *
-                            "folds for this specific population or setting `cv_bulk = true`.",
-                        ),
-                    )
+                    # throw(
+                    #     ArgumentError(
+                    #         "The numer of entries in population: `" *
+                    #         population *
+                    #         "` (n=" *
+                    #         string(length(y)) *
+                    #         ") results in less than 5 entries per " *
+                    #         string(n_folds) *
+                    #         "-fold cross-validation. " *
+                    #         "Please consider reducing the number of " *
+                    #         "folds for this specific population or setting `cv_bulk = true`.",
+                    #     ),
+                    # )
+                    push!(traits_to_skip, trait)
+                    push!(populations_to_skip, population)
                 end
             end
         end
@@ -585,16 +590,18 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
             y = phenomes.phenotypes[:, phenomes.traits.==trait][:, 1]
             y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
             if ceil(length(y) / n_folds) < 5
-                throw(
-                    ArgumentError(
-                        "The numer of entries across all populations " *
-                        "results in less than 5 entries per " *
-                        string(n_folds) *
-                        "-fold cross-validation. " *
-                        "Please consider reducing the number of folds or " *
-                        "setting `cv_bulk = true`.",
-                    ),
-                )
+                # throw(
+                #     ArgumentError(
+                #         "The numer of entries across all populations " *
+                #         "results in less than 5 entries per " *
+                #         string(n_folds) *
+                #         "-fold cross-validation. " *
+                #         "Please consider reducing the number of folds or " *
+                #         "setting `cv_bulk = true`.",
+                #     ),
+                # )
+                push!(traits_to_skip, trait)
+                push!(populations_to_skip, "bulked")
             end
         end
     end
@@ -627,7 +634,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes}
             ),
         )
     end
-    (genomes, phenomes)
+    (genomes, phenomes, traits_to_skip, populations_to_skip)
 end
 
 """
@@ -801,7 +808,7 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno)
     # Load genomes and phenomes to check their validity and dimensions
-    _genomes, phenomes = loadgenomesphenomes(input)
+    _genomes, phenomes, traits_to_skip, populations_to_skip = loadgenomesphenomes(input)
     # Define the model/s to use depending on the type of analysis requested
     models, traits = if input.analysis ∈ [cv, fit]
         input.models, phenomes.traits
@@ -853,6 +860,10 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
             # trait = traits[1]
             for population in populations
                 # population = populations[1]
+                if (trait ∈ traits_to_skip) && (population ∈ populations_to_skip)
+                    # Skip trait-population combinations if we do not have enough entries to perform cross-validation or fit models with confidence
+                    continue
+                end
                 bulk_cv, pops_i = if (population == "BULK_CV") || isnothing(population)
                     true, nothing
                 elseif population == "ACROSS_POP_CV"
