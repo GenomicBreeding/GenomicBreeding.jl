@@ -18,11 +18,11 @@ julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; r
 
 julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
-julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, fname_out_prefix="GBOutput_cv_3/output-3-", populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, bulk_cv=false, fname_out_prefix="GBOutput_cv_3/output-3-", populations=["pop_1", "pop_3"], traits=["trait_1"], n_replications=2, n_folds=3, verbose=false);
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
-julia> length(fnames_cvs) == 32, length(fnames_notes) == 0
+julia> length(fnames_cvs) == 4, length(fnames_notes) == 0
 (true, true)
 ```
 """
@@ -35,6 +35,7 @@ function cv(input::GBInput)::Tuple{Vector{String},Vector{String}}
     # input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, traits=["trait_1"])
     # Parse input and prepare the output directory
     bulk_cv = input.bulk_cv
+    populations = input.populations
     models = input.models
     n_folds = input.n_folds
     n_replications = input.n_replications
@@ -44,10 +45,17 @@ function cv(input::GBInput)::Tuple{Vector{String},Vector{String}}
     verbose = input.verbose
     # Load genomes and phenomes
     genomes, phenomes = loadgenomesphenomes(input)
-    dim_genomes = dimensions(genomes)
     # List the cross-validation function/s to use
-    cv_functions = if !bulk_cv && (dim_genomes["n_populations"] > 1)
-        [cvperpopulation, cvpairwisepopulation, cvleaveonepopulationout]
+    cv_functions = if !bulk_cv && !isnothing(populations)
+        if length(populations) == 1
+            [cvperpopulation]
+        elseif length(populations) == 2
+            [cvpairwisepopulation]
+        elseif length(populations) > 2
+            [cvpairwisepopulation, cvleaveonepopulationout]
+        else
+            throw(ErrorException("The input population in GBInput is empty."))
+        end
     else
         [cvbulk]
     end
