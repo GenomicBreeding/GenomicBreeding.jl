@@ -385,7 +385,7 @@ true
 julia> rm.([fname_geno, fname_pheno]);
 ```
 """
-function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes, Vector{String}, Vector{String}}
+function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{String},Vector{String}}
     # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -638,9 +638,9 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes, Vector{Str
 end
 
 """
-    loadcvs(input::GBInput)::Vector{CV}
+    loadcvs(input::GBInput; min_train_size::Int64=10)::Vector{CV}
 
-Load CVs from repeated k-fold cross-validation
+Load CVs from repeated k-fold cross-validation (with option to exclude folds with training set size less than 10)
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -666,7 +666,7 @@ julia> length(cvs) == length(fnames_cvs)
 true
 ```
 """
-function loadcvs(input::GBInput)::Vector{CV}
+function loadcvs(input::GBInput; min_train_size::Int64 = 10)::Vector{CV}
     directory_name = if dirname(input.fname_out_prefix) == ""
         pwd()
     else
@@ -697,11 +697,22 @@ function loadcvs(input::GBInput)::Vector{CV}
     fnames_cvs = joinpath.(directory_name, files[idx])
     # println(idx) 
     # println(fnames_cvs) 
-    cvs = Vector{CV}(undef, length(fnames_cvs))
+    cvs::Vector{CV} = []
     for (i, fname) in enumerate(fnames_cvs)
         # i = 1; fname = fnames_cvs[i];
         try
-            cvs[i] = readjld2(CV, fname = fname)
+            c = readjld2(CV, fname = fname)
+            # Skip folds which failed due to insufficient sizes and/or nil phenotype variance and/or training size less than 10
+
+            if (
+                (length(c.fit.metrics) == 9) &&
+                !ismissing(c.metrics["cor"]) &&
+                !isnan(c.metrics["cor"]) &&
+                !isinf(c.metrics["cor"]) &&
+                (length(c.validation_entries) >= min_train_size)
+            )
+                push!(cvs, c)
+            end
         catch
             # println(fname) 
             continue
