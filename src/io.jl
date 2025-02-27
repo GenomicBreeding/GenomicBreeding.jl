@@ -561,7 +561,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
         # Per trait per population, is we do not wish bulk CV and we have more than 1 population
         for trait in phenomes.traits
             for population in phenomes.populations
-                # trait=phenomes.traits[1]; population=phenomes.populations[1];
+                # trait=phenomes.traits[16]; population=phenomes.populations[16];
                 y = phenomes.phenotypes[phenomes.populations.==population, phenomes.traits.==trait][:, 1]
                 y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
                 if ceil(length(y) / n_folds) < 5
@@ -578,15 +578,18 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
                     #         "folds for this specific population or setting `cv_bulk = true`.",
                     #     ),
                     # )
+                    # println(string("trait = \"", trait, "\"; population = \"", population, "\"; ceil(length(y) / n_folds) = ", ceil(length(y) / n_folds)))
                     push!(traits_to_skip, trait)
                     push!(populations_to_skip, population)
                 end
+
+
             end
         end
     else
-        # Per trait across all populations - bulked
+        # Per trait across all populations - BULK_CV
         for trait in phenomes.traits
-            # trait = phenomes.traits[1]
+            # trait = phenomes.traits[16]
             y = phenomes.phenotypes[:, phenomes.traits.==trait][:, 1]
             y = y[.!ismissing.(y).&&.!isnan.(y).&&.!isinf.(y)]
             if ceil(length(y) / n_folds) < 5
@@ -601,7 +604,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
                 #     ),
                 # )
                 push!(traits_to_skip, trait)
-                push!(populations_to_skip, "bulked")
+                push!(populations_to_skip, "BULK_CV")
             end
         end
     end
@@ -859,10 +862,10 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     for model in models
         # model = models[1]
         for trait in traits
-            # trait = traits[1]
+            # trait = traits[16]
             for population in populations
-                # population = populations[1]
-                if (trait ∈ traits_to_skip) && (population ∈ populations_to_skip)
+                # population = populations[4]
+                if sum((traits_to_skip .== trait) .&& (populations_to_skip .== population)) > 0
                     # Skip trait-population combinations if we do not have enough entries to perform cross-validation or fit models with confidence
                     continue
                 end
