@@ -27,7 +27,7 @@
         SLURM_time_limit_dd_hhmmss::String
         SLURM_max_array_jobs_running::Int64
         SLURM_module_load_R_version_name::String
-        SLURM_module_load_BLAS_version_name::String
+        SLURM_module_load_Julia_version_name::String
         verbose::Bool
     end
 
@@ -64,7 +64,7 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
 - `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
 - `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "R")
-- `SLURM_module_load_BLAS_version_name`: name of the BLAS module and version to be used to use with R::BGLR. This is non-critical as there is usually a system default to fallback to. (Default = "")
+- `SLURM_module_load_Julia_version_name`: name and version of Julia where you 've install GenomicBreeding.jl. (Default = "" which means you have installed Julia via juliaup and will not be relying on your module system.)
 - `verbose`: show messages (Default = true)
 """
 mutable struct GBInput <: AbstractGB
@@ -95,7 +95,7 @@ mutable struct GBInput <: AbstractGB
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
     SLURM_module_load_R_version_name::String
-    SLURM_module_load_BLAS_version_name::String
+    SLURM_module_load_Julia_version_name::String
     verbose::Bool
     function GBInput(;
         fname_geno::String,
@@ -125,7 +125,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
         SLURM_module_load_R_version_name::String = "R",
-        SLURM_module_load_BLAS_version_name::String = "",
+        SLURM_module_load_Julia_version_name::String = "",
         verbose::Bool = true,
     )
         date = Dates.format(now(), "yyyymmddHHMMSSssss")
@@ -168,7 +168,7 @@ mutable struct GBInput <: AbstractGB
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
             SLURM_module_load_R_version_name,
-            SLURM_module_load_BLAS_version_name,
+            SLURM_module_load_Julia_version_name,
             verbose,
         )
     end

@@ -16,7 +16,7 @@ fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
 # Repeated k-fold cross-validation
-input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_cpus_per_task=5, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.2.0-foss-2021b", SLURM_module_load_BLAS_version_name="OpenBLAS/0.3.0-GCC-6.4.0-2.28", fname_out_prefix="GBOutput/test-", verbose=false);
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_account_name="dbiof1", SLURM_cpus_per_task=5, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.4.2-gfbf-2024a", SLURM_module_load_Julia_version_name="Julia/1.11.3-linux-x86_64", fname_out_prefix="GBOutput/test-", verbose=false);
 outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
 run(`sh -c 'squeue -u "\$USER"'`)
 run(`sh -c 'tail slurm-*_*.out'`)
@@ -159,7 +159,7 @@ function submitslurmarrayjobs(input::GBInput)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         string("module load ", input.SLURM_module_load_R_version_name),
-        string("module load ", input.SLURM_module_load_BLAS_version_name),
+        string("module load ", input.SLURM_module_load_Julia_version_name),
         "LD_LIBRARY_PATH=\"\"",
         string(
             "time julia --threads ",
@@ -168,14 +168,14 @@ function submitslurmarrayjobs(input::GBInput)::String
             joinpath(run_outdir, "run.jl \$SLURM_ARRAY_TASK_ID"),
         ),
     ]
-    # Remove the account name, partion and BLAS module is empty
+    # Remove the account name, partion and Julia module (use manually installed Julia) if empty
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
     end
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
     end
-    if input.SLURM_module_load_BLAS_version_name == ""
+    if input.SLURM_module_load_Julia_version_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
     end
     # Save the Slurm run file
