@@ -26,6 +26,7 @@
         SLURM_mem_G::Int64
         SLURM_time_limit_dd_hhmmss::String
         SLURM_max_array_jobs_running::Int64
+        SLURM_module_load_Conda_version_name::String
         SLURM_module_load_R_version_name::String
         SLURM_module_load_Julia_version_name::String
         verbose::Bool
@@ -63,7 +64,8 @@ Input struct (belongs to GBCore.AbstractGB type)
 - `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1)
 - `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
 - `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
-- `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "R")
+- `SLURM_module_load_Conda_version_name`: name of the Conda module to be loaded (Default = "Miniconda3")
+- `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "conda" which means you have installed R and BGLR using the GenomicBreeding_conda.yml)
 - `SLURM_module_load_Julia_version_name`: name and version of Julia where you 've install GenomicBreeding.jl. (Default = "" which means you have installed Julia via juliaup and will not be relying on your module system.)
 - `verbose`: show messages (Default = true)
 """
@@ -94,6 +96,7 @@ mutable struct GBInput <: AbstractGB
     SLURM_mem_G::Int64
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
+    SLURM_module_load_Conda_version_name::String
     SLURM_module_load_R_version_name::String
     SLURM_module_load_Julia_version_name::String
     verbose::Bool
@@ -124,7 +127,8 @@ mutable struct GBInput <: AbstractGB
         SLURM_mem_G::Int64 = 1,
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
-        SLURM_module_load_R_version_name::String = "R",
+        SLURM_module_load_Conda_version_name::String = "Miniconda3",
+        SLURM_module_load_R_version_name::String = "conda",
         SLURM_module_load_Julia_version_name::String = "",
         verbose::Bool = true,
     )
@@ -167,6 +171,7 @@ mutable struct GBInput <: AbstractGB
             Float64(SLURM_mem_G),
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
+            SLURM_module_load_Conda_version_name,
             SLURM_module_load_R_version_name,
             SLURM_module_load_Julia_version_name,
             verbose,

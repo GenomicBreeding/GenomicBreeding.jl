@@ -7,16 +7,16 @@ Note that you will be prompted to enter YES to proceed with Slurm job submission
 
 # Example
 ```julia
-using GBCore, GBIO, GenomicBreeding, StatsBase;
+using GenomicBreeding, StatsBase;
 using GenomicBreeding: cv, fit, predict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
-genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+genomes = GenomicBreeding.GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+trials, _ = GenomicBreeding.GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 phenomes = extractphenomes(trials);
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
 
 # Repeated k-fold cross-validation
-input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_account_name="dbiof1", SLURM_cpus_per_task=5, SLURM_mem_G=5, SLURM_module_load_R_version_name="R/4.4.2-gfbf-2024a", SLURM_module_load_Julia_version_name="Julia/1.11.3-linux-x86_64", fname_out_prefix="GBOutput/test-", verbose=false);
+input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, SLURM_account_name="dbiof1", SLURM_cpus_per_task=5, SLURM_mem_G=5, fname_out_prefix="GBOutput/test-", verbose=false);
 outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
 run(`sh -c 'squeue -u "\$USER"'`)
 run(`sh -c 'tail slurm-*_*.out'`)
@@ -56,11 +56,22 @@ function submitslurmarrayjobs(input::GBInput)::String
     # Catch the main errors early
     errors::Vector{String} = checkinputs(input)
     begin
-        commands = [
-            "#!/bin/bash",
-            string("module load ", input.SLURM_module_load_R_version_name),
-            "Rscript -e 'if(sum(rownames(installed.packages()) == \"BGLR\") > 0){cat(0)}else{cat(404)}'",
-        ]
+        commands = if input.SLURM_module_load_R_version_name != "conda"
+            [
+                "#!/bin/bash",
+                string("module load ", input.SLURM_module_load_R_version_name),
+                "Rscript -e 'if(sum(rownames(installed.packages()) == \"BGLR\") > 0){cat(0)}else{cat(404)}'",
+            ]
+        else
+            [
+                "#!/bin/bash",
+                string("module load ", input.SLURM_module_load_Conda_version_name),
+                "conda init bash",
+                "source ~/.bashrc",
+                "conda activate GenomicBreeding",
+                "Rscript -e 'if(sum(rownames(installed.packages()) == \"BGLR\") > 0){cat(0)}else{cat(404)}'",
+            ]
+        end
         open("test-check_BGLR.sh", "w") do file
             write(file, join(commands, "\n") * "\n")
         end
@@ -158,9 +169,9 @@ function submitslurmarrayjobs(input::GBInput)::String
         string("#SBATCH --cpus-per-task=", input.SLURM_cpus_per_task),
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
+        "LD_LIBRARY_PATH=\"\"",
         string("module load ", input.SLURM_module_load_R_version_name),
         string("module load ", input.SLURM_module_load_Julia_version_name),
-        "LD_LIBRARY_PATH=\"\"",
         string(
             "time julia --threads ",
             input.SLURM_cpus_per_task,
@@ -175,9 +186,20 @@ function submitslurmarrayjobs(input::GBInput)::String
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
     end
+    if input.SLURM_module_load_Julia_version_name == "conda"
+        idx = findall(isnothing.(match.(Regex("^module load conda\$"), slurm_script)))
+        slurm_script[idx] = string(
+            "module load ", input.SLURM_module_load_Conda_version_name, ";",
+            "conda init bash;",
+            "source ~/.bashrc;",
+            "conda activate GenomicBreeding;",
+        )
+    end
     if input.SLURM_module_load_Julia_version_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
     end
+
+
     # Save the Slurm run file
     open(joinpath(run_outdir, "run.slurm"), "w") do file
         write(file, join(slurm_script, "\n") * "\n")
