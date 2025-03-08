@@ -1,7 +1,7 @@
 using Pkg
 using JuliaFormatter
-Pkg.update()
 Pkg.activate(".")
+Pkg.update()
 # Format
 format(".")
 # Test
