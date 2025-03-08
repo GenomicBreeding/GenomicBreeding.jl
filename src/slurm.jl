@@ -189,7 +189,9 @@ function submitslurmarrayjobs(input::GBInput)::String
     if input.SLURM_module_load_Julia_version_name == "conda"
         idx = findall(isnothing.(match.(Regex("^module load conda\$"), slurm_script)))
         slurm_script[idx] = string(
-            "module load ", input.SLURM_module_load_Conda_version_name, ";",
+            "module load ",
+            input.SLURM_module_load_Conda_version_name,
+            ";",
             "conda init bash;",
             "source ~/.bashrc;",
             "conda activate GenomicBreeding;",

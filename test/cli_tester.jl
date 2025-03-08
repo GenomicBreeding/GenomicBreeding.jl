@@ -1,5 +1,6 @@
 using Pkg
 using JuliaFormatter
+Pkg.update()
 Pkg.activate(".")
 # Format
 format(".")
