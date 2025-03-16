@@ -1,9 +1,39 @@
 """
     submitslurmarrayjobs(; input::GBInput)::String
 
-Assess genomic prediction accuracy via replicated k-fold cross-validation.
-Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
-Note that you will be prompted to enter YES to proceed with Slurm job submission after showing you the job details to review and confirm.
+Submit an array of Slurm jobs for genomic prediction analysis.
+
+# Arguments
+- `input::GBInput`: A GBInput struct containing all necessary parameters for job submission and analysis.
+
+# Returns
+- `String`: Path to the output directory where results will be stored.
+
+# Details
+This function handles the submission of parallel genomic prediction jobs to a Slurm cluster. It performs the following steps:
+1. Validates input parameters and checks for required R packages
+2. Creates necessary output directories
+3. Prepares individual job inputs
+4. Generates Julia and Slurm scripts
+5. Submits the array job to the Slurm scheduler
+
+The function supports various genomic analyses including:
+- Cross-validation (cv)
+- Model fitting (fit)
+- Prediction (predict)
+- GWAS analysis (gwas)
+
+# Job Configuration
+- Uses Slurm array jobs for parallel execution
+- Configurable CPU, memory, and time limit parameters
+- Supports both module-based and conda environments
+- Interactive confirmation before job submission
+
+# Notes
+- Requires a working Slurm environment
+- BGLR R package must be installed
+- User will be prompted to enter "YES" to confirm job submission
+- Job array size is controlled by `SLURM_max_array_jobs_running`
 
 # Example
 ```julia
@@ -20,7 +50,7 @@ input_cv = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=cv, 
 outdir = submitslurmarrayjobs(input_cv); ### You will be asked to enter "YES" to proceed with job submission.
 run(`sh -c 'squeue -u "\$USER"'`)
 run(`sh -c 'tail slurm-*_*.out'`)
-run(`sh -c 'grep -i "err" slurm-*_*.out | grep -v "blas" | cut -d: -f1 | sort | uniq'`)
+run(`sh -c 'grep -i "err" slurm-*_*.out'`)
 cvs = loadcvs(input_cv)
 df_across_entries, df_per_entry = tabularise(cvs)
 sum(df_across_entries.model .== "bayesa") / nrow(df_across_entries)
@@ -42,7 +72,6 @@ length(fits)
 input_predict = clone(input_fit)
 input_predict.analysis = predict
 outdir = submitslurmarrayjobs(input_predict)
-
 run(`squeue`)
 ```
 """
@@ -186,8 +215,8 @@ function submitslurmarrayjobs(input::GBInput)::String
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
     end
-    if input.SLURM_module_load_Julia_version_name == "conda"
-        idx = findall(isnothing.(match.(Regex("^module load conda\$"), slurm_script)))
+    if input.SLURM_module_load_R_version_name == "conda"
+        idx = findall(.!isnothing.(match.(Regex("^module load conda\$"), slurm_script)))[1]
         slurm_script[idx] = string(
             "module load ",
             input.SLURM_module_load_Conda_version_name,
@@ -200,8 +229,6 @@ function submitslurmarrayjobs(input::GBInput)::String
     if input.SLURM_module_load_Julia_version_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
     end
-
-
     # Save the Slurm run file
     open(joinpath(run_outdir, "run.slurm"), "w") do file
         write(file, join(slurm_script, "\n") * "\n")

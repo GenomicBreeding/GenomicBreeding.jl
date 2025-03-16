@@ -3,12 +3,43 @@
         input::GBInput,
         skip_genomes::Bool = false,
         skip_phenomes::Bool = false,
+        skip_cvs::Bool = false,
         format::String = "svg",
         plot_size::Tuple{Int64,Int64} = (600, 450),
-        overwrite::Bool = false,
+        overwrite::Bool = false
     )::String
 
-Plot genomes, phenomes, and CVs, if present.
+Generate and save visualization plots for genomic, phenomic, and cross-validation data.
+
+# Arguments
+- `input::GBInput`: Input configuration containing file paths and settings
+- `skip_genomes::Bool`: If true, skip generating genome-related plots
+- `skip_phenomes::Bool`: If true, skip generating phenome-related plots
+- `skip_cvs::Bool`: If true, skip generating cross-validation plots
+- `format::String`: Output file format for plots (e.g., "svg", "png")
+- `plot_size::Tuple{Int64,Int64}`: Dimensions of output plots in pixels (width, height)
+- `overwrite::Bool`: If true, overwrite existing plot files
+
+# Returns
+- `String`: Path to the output directory containing generated plots
+
+# Plot Types
+## Genomes and Phenomes
+- Distribution plots
+- Violin plots
+- Correlation heatmaps
+- Tree plots
+- PCA biplots
+
+## Cross-validation
+- Bar plots
+- Box plots
+
+# Output Structure
+Creates a directory structure under `input.fname_out_prefix/plots/` with subdirectories:
+- `genomes/`: Genome-related visualizations
+- `phenomes/`: Phenome-related visualizations
+- `cvs/`: Cross-validation visualizations
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)

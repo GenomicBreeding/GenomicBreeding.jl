@@ -15,7 +15,7 @@ curl -fsSL https://install.julialang.org | sh
 type -a julia
 ```
 
-Currently, [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl) is dependent on [R](https://www.r-project.org/) and the package [BGLR](https://github.com/gdlc/BGLR-R) for Bayes A, Bayes B and Bayes C models. Because of this we require that [R](https://www.r-project.org/) and [BGLR](https://github.com/gdlc/BGLR-R) be installed. To help with this, you may install all the requirements via [Conda](https://www.anaconda.com/docs/getting-started/miniconda/main) using the environment file: [`GenomicBreeding_conda.yml`](GenomicBreeding_conda.yml). We aim to have a pure Julia implementation of Bayesian models using [Turing.jl](https://turinglang.org/).
+Currently, [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl) is dependent on [R](https://www.r-project.org/) and the package [BGLR](https://github.com/gdlc/BGLR-R) for Bayes A, Bayes B and Bayes C models. Because of this we require that [R](https://www.r-project.org/) and [BGLR](https://github.com/gdlc/BGLR-R) be installed. To help with this, you may install all the requirements via [Conda](https://www.anaconda.com/docs/getting-started/miniconda/main) using the environment file: [`GenomicBreeding_conda.yml`](GenomicBreeding_conda.yml). We aim to have a pure Julia implementation of Bayesian models using [Turing.jl](https://turinglang.org/) in the near future (we just need to speed-up the models a bit).
 
 
 Install the [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) library in Julia:
@@ -77,8 +77,6 @@ input = GBInput(
     SLURM_mem_G=5, 
     SLURM_time_limit_dd_hhmmss="00-00:15:00",
     SLURM_max_array_jobs_running=10,
-    SLURM_module_load_R_version_name="R",
-    SLURM_module_load_BLAS_version_name="FlexiBLAS",
     verbose=true
 )
 # Preliminary look at the genotype and phenotype data
@@ -104,6 +102,118 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 
 ### 2. Example 2: test data
 
+```julia
+
+```
+
+## File formats
+
+### Variant call format 
+
+See [VCFv4.2](https://samtools.github.io/hts-specs/VCFv4.2.pdf) and [VCFv4.3](https://samtools.github.io/hts-specs/VCFv4.3.pdf) for details in the format specifications.
+
+Note that given that we work with autopolyploids, and pools (e.g. half-sib families) more often, the VCF parser prioritise the `AF` (allele frequency) field, followed by the `AD` (allele depth) field, and finally the `GT` (genotype) field. If your VCF file needs depth-based filtering, you may opt for having the `AD` field instead of the `AF` field, as well as include the `DP` (depth) field. A way to generate a VCF file with `AD` and `DP` fields is via: 
+
+```shell
+time \
+bcftools mpileup \
+    -BI \
+    -a AD,DP \
+    -d 4000000 \
+    -f ${REF} \
+    -T ${LOCI} \
+    -b ${BAMS_LIST} \
+    -Ov > ${PREFIX}-MPILEUP.vcf
+```
+
+where the following flags refer to:
+
+- `-B`: disable probabilistic realignment for the computation of base alignment quality (BAQ). BAQ is the Phred-scaled probability of a read base being misaligned. Applying this option greatly helps to reduce false SNPs caused by misalignments.
+- `-I`: do not perform INDEL calling
+- `-a AD,DP`: comma-separated list of FORMAT and INFO tags to output, i.e. Total allelic depth (Number=R,Type=Integer) (AD) and Number of high-quality bases (Number=1,Type=Integer) (DP)
+- `-Ou`: output uncompressed BCF, because we're piping into bcftools call
+- `-d 4000000`: at each position, read maximally 4 million reads per input file
+- `-f ...`: reference genome in fasta format
+- `-T ...`: regions or loci specified in a tab-delimited file. The columns of the tab-delimited file can contain either positions (two-column format: CHROM, POS) or intervals (three-column format: CHROM, BEG, END), but not both. Positions are 1-based and inclusive.
+- `-b ...`: list of input alignment files, one file per line
+
+### Allele frequency table
+
+This is a simple human-readable string-delimited text file (tab-delimited by default). The smallest minimal valid allele frequency table is as follows:
+
+| chrom | pos | all_alleles | allele | entry_1 |
+| :---- | :-- | :---------- | :----- | :------ |
+| chr_1 | 123 | A|T         | A      | 0.5     |
+
+Each column must be sorted exactly as this: starting with "**chrom**" for chromosome or scaffold name, "**pos**" for the position in bases, "**all_alleles**" for a string of reference and alternative alleles separated by pipe/s (`|`), "**allele**" for exactly one of the alleles in the previous column, and finally subsequency column names refer to the names of the entries. Values under the 5th and subsequent columns are assumed to be allele frequencies, i.e. ranges from `0.0` to `1.0`. Missing values may be encoded as any of the following:
+
+- ""
+- "missing"
+- "NA"
+- "na"
+- "N/A"
+- "n/a"
+
+An additional header may be included, for example:
+
+| chrom | pos | all_alleles | allele | entry_1 | entry_2 | entry_3 |
+| chrom | pos | all_alleles | allele | pop_ABC | pop_DEF | pop_XYZ |
+| :---- | :-- | :---------- | :----- | :------ | :------ | :------ |
+| chr_1 | 123 | A\|T        | A      | 0.51    | 0.25    | 0.25    |
+
+where the first header is the same as the detailed above, while the second header replaces the entry names with the corresponding population or group the entries belong to.
+
+### JLD2
+
+This is a compressed binary format containing Julia structs (e.g. genomes, and phenomes struct). It is a subset of the scientific data format [HDF5](https://www.hdfgroup.org/solutions/hdf5/).
+
+### Trials table
+
+Similar to the allele frequency table format, this is a simple human-readable string-delimited text file (tab-delimited by default). The smallest minimal valid trials table is as follows:
+
+| years | seasons           | harvests          | sites     | entries | populations | replications | blocks | rows | cols | trait_1 |
+| :---- | :---------------- | :---------------- | :-------- | :------ | :---------- | :----------- | :----- | :--- | :--- | :------ |
+| 2023  | 2023_Early_Spring | FLIGHT-2023-09-05 | LOC1_TRT1 | entry_1 | pop_1       | rep_1        | row1   | row1 | col1 | 3.1416  |
+
+The first 10 columns must be named (or as close as possible) as the following in any order: 
+
+- "**years**"
+- "**seasons**"
+- "**harvests**"
+- "**sites**"
+- "**entries**"
+- "**populations**"
+- "**replications**"
+- "**blocks**"
+- "**rows**"
+- "**cols**"
+
+The subsequent columns (column 11 and so on) refer to the name of the traits. Values under the 11th and subsequent columns are assumed to be numeric. Missing values may be encoded as any of the following:
+
+- ""
+- "missing"
+- "NA"
+- "na"
+- "N/A"
+- "n/a"
+
+
+### Phenomes table
+
+Again, similar to the allele frequency table format, this is a simple human-readable string-delimited text file (tab-delimited by default). The smallest minimal valid phenomes table is as follows:
+
+| entries | populations | trait_1 |
+| :------ | :---------- | :------ |
+| entry_1 | pop_XYZ     | 0.5772  |
+
+Each column must be sorted exactly as this: starting with "**entries**" for the names of the entries, genotypes, families or pools, "**populations**" for the corresponding population names or group names. Subsequent column names (column 3 and so on) refer to the trait names. Values under the 3rd and subsequent columns are assumed to be numeric. Missing values may be encoded as any of the following:
+
+- ""
+- "missing"
+- "NA"
+- "na"
+- "N/A"
+- "n/a"
 
 ## Dev stuff:
 
@@ -121,11 +231,6 @@ julia --threads 8,1 --load test/interactive_prelude.jl
 ```shell
 time julia test/cli_tester.jl
 ```
-
-### Docstring conventions
-
-- Structs and main functions with title description, etc including Examples with doctests
-- Methods, i.e. functions with the same names but different input types follow the usual Julia docstring pattern, i.e. the function signature, then some description, then details including parameter description, and finally examples with doctests
 
 ### Initialise a new package
 

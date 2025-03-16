@@ -1,73 +1,59 @@
 """
     mutable struct GBInput
-        fname_geno::String
-        fname_pheno::String
-        fname_allele_effects_jld2s::Vector{String}
-        analysis::Function
-        bulk_cv::Bool
-        populations::Union{Nothing,Vector{String}}
-        traits::Union{Nothing,Vector{String}}
-        models::Any
-        n_folds::Int64
-        n_replications::Int64
-        gwas_models::Any
-        keep_all::Bool
-        maf::Float64
-        mtv::Float64
-        n_iter::Int64
-        n_burnin::Int64
-        fname_out_prefix::String
-        SLURM_job_name::String
-        SLURM_account_name::String
-        SLURM_partition_name::String
-        SLURM_nodes_per_array_job::Int64
-        SLURM_tasks_per_node::Int64
-        SLURM_cpus_per_task::Int64
-        SLURM_mem_G::Int64
-        SLURM_time_limit_dd_hhmmss::String
-        SLURM_max_array_jobs_running::Int64
-        SLURM_module_load_Conda_version_name::String
-        SLURM_module_load_R_version_name::String
-        SLURM_module_load_Julia_version_name::String
-        verbose::Bool
-    end
 
-Input struct (belongs to GBCore.AbstractGB type)
+Main input struct for genomic breeding analysis (implements GBCore.AbstractGB)
 
-- `fname_geno`: genotype file (see file format guide: **TODO:** {URL HERE})
-- `fname_pheno`: phenotype file (see file format guide: **TODO:** {URL HERE}; Default = "")
-- `fname_allele_effects_jld2s`: vector of filenames of JLD2 files containing the Fit struct of a genomic prediction model (Default = [""])
-- `analysis`: analysis to perform or function to use (Default = cv):
-    + `cv`: replicated k-fold cross-validation
-    + `fit`: fit genomic prediction models without cross-validation to extract allele effects to compute GEBVs on other genomes
-    + `predict`: compute GEBVs using the output of `fit` and genotype data lacking empirical GP-model-associated phenotype data in the `fit` output (do not forget to set the `fname_allele_effects_jld2s` field)
-    + `gwas`: genome-wide association study
-- `bulk_cv`: perform cross-validation across all populations, i.e. disregard population grouping (Default = false)
-- `populations`: include only these populations (Default = nothing which means include all populations)
-- `traits`: include only these traits (Default = nothing which means include all traits)
-- `models`: genomic prediction model functions (Default = [ridge, bayesa]; see models list: **TODO:** {URL HERE})
-- `n_folds`: number of k partitions for k-fold cross-validation (Default = 5)
-- `n_replications`: number of replications for repeated k-fold cross-validation (Default = 5)
-- `gwas_models`: models to use if performning genome-wide association study (Default = [gwasols, gwaslmm])
-- `keep_all`: keep all entries upon merging genomes and phenomes potentially resulting in sparsities in both structs? (Default = false)
-- `maf`: minimum allele frequency (Default = 0.05)
-- `mtv`: minimum trait variance (Default = 1e-7)
-- `n_iter`: number of Bayesian model fitting MCMC/HMC iteration (Default = 1_500)
-- `n_burnin`: number of initial Bayesian model fitting MCMC/HMC iterations to be excluded from the posterior distribution (Default = 500)
-- `fname_out_prefix`: prefix of the output files which may include directory names (Default = "" which translates to `./GBOuput/output-<yyyymmddHHMMSS>-<3_digit_random_number>-`)
-- `SLURM_job_name`: name of the Slurm job array (Default = "")
-- `SLURM_account_name`: Slurm account name (Default = "")
-- `SLURM_partition_name`: Slurm paritition to use (Default = "")
-- `SLURM_nodes_per_array_job`: number of nodes per array job (Default = 1)
-- `SLURM_tasks_per_node`: number of tasks per node (Default = 1)
-- `SLURM_cpus_per_task`: number of CPU cores per task (Default = 1)
-- `SLURM_mem_G`: maximum memroy requested in gigabytes (Default = 1)
-- `SLURM_time_limit_dd_hhmmss`: maximum computation time requested in the follwowing format: "dd-hh:mm:ss" (Default = "00-01:00:00")
-- `SLURM_max_array_jobs_running`: maximum number of array jobs which can run simultaneously (Default = 20)
-- `SLURM_module_load_Conda_version_name`: name of the Conda module to be loaded (Default = "Miniconda3")
-- `SLURM_module_load_R_version_name`: name of the R statistical language module and version to be used to call R::BGLR (Default = "conda" which means you have installed R and BGLR using the GenomicBreeding_conda.yml)
-- `SLURM_module_load_Julia_version_name`: name and version of Julia where you 've install GenomicBreeding.jl. (Default = "" which means you have installed Julia via juliaup and will not be relying on your module system.)
-- `verbose`: show messages (Default = true)
+# Fields
+
+## Required
+- `fname_geno`: Path to genotype file (see file format guide for details)
+
+## Optional Data Files
+- `fname_pheno`: Path to phenotype file (Default: "" - see file format guide for details)
+- `fname_allele_effects_jld2s`: Vector of paths to JLD2 files containing Fit structs (Default: [""])
+
+## Analysis Settings
+- `analysis`: Analysis function to perform (Default: cv)
+  - `cv`: Replicated k-fold cross-validation
+  - `fit`: Fit genomic prediction models to extract allele effects
+  - `predict`: Compute GEBVs using existing model fits
+  - `gwas`: Genome-wide association study
+- `bulk_cv`: Perform cross-validation across all populations (Default: false)
+- `populations`: Vector of populations to include (Default: all)
+- `traits`: Vector of traits to analyze (Default: all)
+- `models`: Vector of genomic prediction model functions (Default: [ridge, bayesa])
+- `gwas_models`: Vector of GWAS model functions (Default: [gwasols, gwaslmm])
+
+## Cross-Validation Parameters
+- `n_folds`: Number of CV folds (Default: 5)
+- `n_replications`: Number of CV replications (Default: 5)
+
+## Filtering Parameters
+- `keep_all`: Keep all entries when merging data (Default: false)
+- `maf`: Minimum allele frequency (Default: 0.05)
+- `mtv`: Minimum trait variance (Default: 1e-7)
+
+## Model Parameters
+- `n_iter`: MCMC iterations (Default: 1_500)
+- `n_burnin`: MCMC burn-in iterations (Default: 500)
+
+## Output Settings
+- `fname_out_prefix`: Output file prefix & directory (Default: GBOutput/output-<timestamp>-)
+- `verbose`: Show progress messages (Default: true)
+
+## SLURM Settings
+- `SLURM_job_name`: Job array name (Default: GBJob-<timestamp>)
+- `SLURM_account_name`: Account name (Default: "")
+- `SLURM_partition_name`: Partition to use (Default: "")
+- `SLURM_nodes_per_array_job`: Nodes per job (Default: 1)
+- `SLURM_tasks_per_node`: Tasks per node (Default: 1)
+- `SLURM_cpus_per_task`: CPUs per task (Default: 1)
+- `SLURM_mem_G`: Memory in GB (Default: 1)
+- `SLURM_time_limit_dd_hhmmss`: Time limit as "dd-hh:mm:ss" (Default: "00-01:00:00")
+- `SLURM_max_array_jobs_running`: Max concurrent array jobs (Default: 20)
+- `SLURM_module_load_Conda_version_name`: Conda module name (Default: "Miniconda3")
+- `SLURM_module_load_R_version_name`: R module name (Default: "conda" which will use the R installed in the conda environment - see installation instructions for details)
+- `SLURM_module_load_Julia_version_name`: Julia module name (Default: "" which will use the Julia installed via JuliaUp - see installation instructions for details)
 """
 mutable struct GBInput <: AbstractGB
     fname_geno::String
@@ -182,10 +168,20 @@ end
 """
     Base.hash(x::GBInput, h::UInt)::UInt
 
-Hash a GBInput struct using all its fields.
-We deliberately excluded the allele_frequencies, and mask for efficiency.
+Compute a hash value for a `GBInput` struct by combining the hash values of all its fields.
 
-## Examples
+# Arguments
+- `x::GBInput`: The input structure to be hashed
+- `h::UInt`: The hash value seed
+
+# Returns
+- `UInt`: A hash value that uniquely identifies the content of the `GBInput` struct
+
+# Details
+This method implements hash computation for the `GBInput` type by iterating through
+all fields and combining their hash values.
+
+# Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> input = GBInput(fname_geno="", fname_pheno="");
 
@@ -206,9 +202,20 @@ end
 """
     Base.:(==)(x::GBInput, y::GBInput)::Bool
 
-Equality of GBInput structs using the hash function defined for GBInput structs.
+Compare two `GBInput` structs for equality by comparing their hash values.
 
-## Examples
+This method overloads the `==` operator for `GBInput` structs, allowing direct comparison
+using the `==` operator. Two `GBInput` structs are considered equal if they have identical
+hash values, which implies they have the same values for all relevant fields.
+
+# Arguments
+- `x::GBInput`: First GBInput struct to compare
+- `y::GBInput`: Second GBInput struct to compare
+
+# Returns
+- `Bool`: `true` if the hash values of both structs are equal, `false` otherwise
+
+# Examples
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> input_1 = input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2", fname_out_prefix="test1-", SLURM_job_name="slurmjob1");
 
@@ -230,9 +237,18 @@ end
 """
     clone(x::GBInput)::GBInput
 
-Clone a GBInput object
+Create a deep copy of a GBInput object, duplicating all field values into a new instance.
 
-## Example
+This function allows you to create an independent copy of a GBInput object where modifications 
+to the clone won't affect the original object.
+
+# Arguments
+- `x::GBInput`: The source GBInput object to be cloned
+
+# Returns
+- `::GBInput`: A new GBInput instance with identical field values
+
+# Example
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> input = GBInput(fname_geno="geno1.jld2", fname_pheno="pheno1.jld2");
 
@@ -255,7 +271,15 @@ end
 """
     checkdims(input::GBInput)::Bool
 
-Check dimension compatibility of the fields of the GBInput struct
+Check dimension compatibility of the fields of the GBInput struct.
+Returns `true` if both `models` and `gwas_models` fields in the input are not `nothing`,
+`false` otherwise.
+
+# Arguments
+- `input::GBInput`: Input structure containing genomic data and models
+
+# Returns
+- `Bool`: `true` if dimensions are compatible, `false` otherwise
 
 # Examples
 ```jldoctest; setup = :(using GenomicBreeding)
@@ -275,9 +299,32 @@ function GBCore.checkdims(input::GBInput)::Bool
 end
 
 """
-    checkinputs(input::GBInput)::Bool
+    checkinputs(input::GBInput)::Vector{String}
 
-Check input compatibility with the analysis requested
+Check the compatibility and validity of inputs for genomic analysis.
+
+Returns a vector of error messages. An empty vector indicates all inputs are valid.
+
+# Arguments
+- `input::GBInput`: A struct containing analysis parameters including:
+  - `analysis`: Analysis type (`cv`, `fit`, `predict`, or `gwas`)
+  - `fname_geno`: Path to genotype file
+  - `fname_pheno`: Path to phenotype file
+  - `models`: Vector of selected models
+  - `fname_allele_effects_jld2s`: Paths to allele effects files (for predict)
+
+# Returns
+- `Vector{String}`: Collection of error messages, empty if all inputs are valid
+
+# Validation Rules
+- Analysis type must be one of: `cv`, `fit`, `predict`, or `gwas`
+- For `cv`, `fit`, and `gwas`:
+  - Genotype file must exist
+  - Phenotype file must exist
+  - At least one model must be specified
+- For `predict`:
+  - Genotype file must exist
+  - All specified allele effects files must exist
 
 # Examples
 ```jldoctest; setup = :(using GBCore, GenomicBreeding, StatsBase)
@@ -361,11 +408,38 @@ end
 
 
 """
-    loadgenomesphenomes(input::GBInput)::Tuple{Genomes, Phenomes}
+    loadgenomesphenomes(input::GBInput)::Tuple{Genomes, Phenomes, Vector{String}, Vector{String}}
 
-Load, merge and filter genotype and phenotype data
+Load, merge, and filter genotype and phenotype data from specified input files.
 
-# Example
+# Arguments
+- `input::GBInput`: A struct containing input parameters including:
+  - `fname_geno`: Path to genotype data file
+  - `fname_pheno`: Path to phenotype data file
+  - `bulk_cv`: Boolean for bulk cross-validation
+  - `populations`: Vector of population names to include (optional)
+  - `traits`: Vector of trait names to include (optional)
+  - `n_folds`: Number of cross-validation folds
+  - `keep_all`: Boolean to keep all entries during merging
+  - `maf`: Minimum allele frequency threshold
+  - `mtv`: Minimum trait variance threshold
+  - `verbose`: Boolean for detailed output
+
+# Returns
+A tuple containing:
+1. `Genomes`: Filtered genomic data
+2. `Phenomes`: Filtered phenotypic data
+3. `Vector{String}`: Traits to skip due to insufficient data for cross-validation
+4. `Vector{String}`: Populations to skip due to insufficient data for cross-validation
+
+# Notes
+- Supports multiple file formats (string-delimited, JLD2, VCF)
+- Performs data validation and compatibility checks
+- Filters traits with variance below minimum trait variance (mtv) threshold
+- Ensures sufficient sample size for cross-validation
+- Filters markers based on minimum allele frequency (maf)
+
+# Examples
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
 julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
@@ -648,7 +722,24 @@ end
 """
     loadcvs(input::GBInput; min_train_size::Int64=10)::Vector{CV}
 
-Load CVs from repeated k-fold cross-validation (with option to exclude folds with training set size less than 10)
+Load and filter cross-validation (CV) results from files generated by `GenomicBreeding.cv()`.
+
+# Arguments
+- `input::GBInput`: Input configuration containing the output directory path in `fname_out_prefix`
+- `min_train_size::Int64=10`: Minimum required size for training sets (default: 10)
+
+# Returns
+- `Vector{CV}`: Vector of valid CV objects that meet the following criteria:
+    - Contains complete metrics (length of fit.metrics == 9)
+    - Has valid correlation metric (not missing, NaN, or Inf)
+    - Validation set size ≥ min_train_size
+
+# Throws
+- `ArgumentError`: If the output directory doesn't exist or contains no CV results
+
+# Details
+The function searches for files with pattern "-cv-" and extension ".jld2" in the output directory.
+Invalid or failed CV results are automatically filtered out during loading.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -732,7 +823,17 @@ end
 """
     loadfits(input::GBInput)::Vector{Fit}
 
-Load Fits, i.e. estimates of allele frequency effects from genomic prediction model fittings
+Load fitted allele frequency effects from genomic prediction models stored in JLD2 files.
+
+# Arguments
+- `input::GBInput`: Input configuration containing paths to JLD2 files with fitted allele effects.
+
+# Returns
+- `Vector{Fit}`: Array of `Fit` objects containing the loaded allele frequency effects.
+
+# Details
+The function attempts to load all JLD2 files specified in `input.fname_allele_effects_jld2s`.
+If a file cannot be loaded, that entry will be skipped and remain `undef` in the output vector.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -774,9 +875,30 @@ end
 """
     prepareinputs(input::GBInput)::Vector{GBInput}
 
-Prepare GBInputs for Slurm array jobs
+Create a vector of `GBInput` objects for parallel processing based on the input configuration.
 
-# Example
+# Arguments
+- `input::GBInput`: Initial input configuration containing analysis parameters.
+
+# Returns
+- `Vector{GBInput}`: Array of `GBInput` objects configured for different combinations of:
+  - Models (RR-BLUP, BayesB, etc.)
+  - Traits from phenotype data
+  - Population groups (including bulk and across-population analyses)
+
+# Details
+For different analysis types, the function generates the following combinations:
+- Cross-validation (`cv`): 2 models × traits × (populations + bulk + across-pop)
+- Model fitting (`fit`): 2 models × traits × (populations + bulk)
+- Prediction (`predict`): 1 GBInput per allele effects file
+- GWAS (`gwas`): 1 model × traits × (populations + bulk)
+
+The function handles special cases:
+- Skips trait-population combinations with insufficient data
+- Adjusts settings for bulk and across-population analyses
+- Configures specific parameters for prediction tasks
+
+# Examples
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
 julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
@@ -906,7 +1028,25 @@ end
 """
     prepareoutprefixandoutdir(input::GBInput)::String
 
-Prepare the output prefix by replacing problematic strings in the prefix of the output filenames and instantiating the output folder
+Prepare the output directory and sanitize the output filename prefix for genomic breeding analysis results.
+
+This function performs two main tasks:
+1. Creates the output directory if it doesn't exist
+2. Sanitizes the output filename prefix by replacing problematic characters with underscores
+
+# Arguments
+- `input::GBInput`: Input configuration containing the output file prefix and analysis type
+
+# Returns
+- `String`: Sanitized output file prefix path
+
+# Details
+Problematic characters that are replaced include spaces, newlines, tabs, parentheses, 
+and special characters (`&|:=+*%@!`). The function also ensures the prefix ends with 
+the analysis type and a hyphen.
+
+# Throws
+- `ArgumentError`: If unable to create the output directory
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)

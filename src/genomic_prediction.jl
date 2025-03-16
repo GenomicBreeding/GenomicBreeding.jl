@@ -2,7 +2,30 @@
     cv(input::GBInput)::Tuple{Vector{String},Vector{String}}
 
 Assess genomic prediction accuracy via replicated k-fold cross-validation.
-Outputs are saved as JLD2 (each containing a CV struct per fold, replication, and trait) and possibly text file/s containing notes describing why some jobs failed.
+
+# Arguments
+- `input::GBInput`: A GBInput struct containing configuration parameters including:
+  - `bulk_cv`: Boolean flag for bulk cross-validation
+  - `populations`: Vector of population names to analyze
+  - `models`: Statistical models to use for prediction
+  - `n_folds`: Number of folds for cross-validation
+  - `n_replications`: Number of replications for cross-validation
+  - `fname_out_prefix`: Prefix for output filenames
+  - `verbose`: Boolean flag for detailed output
+
+# Returns
+- `Tuple{Vector{String},Vector{String}}`: A tuple containing:
+  - First element: Vector of paths to JLD2 files containing CV results
+  - Second element: Vector of paths to text files containing error notes
+
+# Details
+The function supports three types of cross-validation:
+- Single population CV when one population is specified
+- Pairwise population CV when two populations are specified
+- Both pairwise and leave-one-population-out CV when more than two populations are specified
+
+Results are saved as JLD2 files (one per fold, replication, and trait) and optional text files 
+containing notes about failed jobs.
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -96,8 +119,34 @@ end
 """
     fit(input::GBInput)::Vector{String}
 
-Extract allele effects by fitting the models without cross-validation.
-Outputs are JLD2 files, each containing the Fit struct for each model-trait-population combination.
+Extract allele effects by fitting genomic prediction models without cross-validation.
+
+# Arguments
+- `input::GBInput`: A GBInput struct containing:
+  - `fname_geno`: Path to genotype data file
+  - `fname_pheno`: Path to phenotype data file
+  - `models`: Vector of model functions to fit (e.g., [bayesa, bayesb])
+  - `traits`: Optional vector of trait names to analyze
+  - `populations`: Optional vector of population names to analyze
+  - `n_iter`: Number of iterations for Bayesian models
+  - `n_burnin`: Number of burn-in iterations for Bayesian models
+  - `verbose`: Boolean for detailed output
+
+# Returns
+- `Vector{String}`: Paths to JLD2 files containing fitted model results, one file per model-trait-population combination
+
+# Details
+The function fits specified genomic prediction models to the full dataset without cross-validation. 
+For each combination of model, trait, and population, it:
+1. Loads and processes genotype and phenotype data
+2. Fits the specified model
+3. Saves results to a JLD2 file with naming pattern: `{prefix}_model_{name}-trait_{name}-population_{name}.jld2`
+
+# Notes
+- If populations is not specified, all unique populations in phenotype data are used
+- If traits is not specified, all unique traits in phenotype data are used
+- For Bayesian models (names containing "bayes"), uses specified iterations and burn-in
+- Will throw an error if output files already exist
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
@@ -224,7 +273,29 @@ end
 """
     predict(input::GBInput)::String
 
-Predict a Phenomes struct, i.e. trait values using the allele effects from `GenomicBreeding.fit(...)` and the input Genomes struct.
+Predict trait values (GEBVs) for a set of genotypes using pre-trained models from `GenomicBreeding.fit()`.
+
+# Arguments
+- `input::GBInput`: Input configuration containing:
+  - `fname_geno`: Path to genotype data file
+  - `fname_allele_effects_jld2s`: Vector of paths to saved model files from previous `fit()` calls
+  - `fname_out_prefix`: Prefix for output files
+  - `analysis`: Set to `GenomicBreeding.predict`
+
+# Returns
+- `String`: Path to the JLD2 file containing predicted phenotypes
+
+# Details
+Takes a `GBInput` object with genotype data and pre-trained models to predict trait values 
+for new individuals. The function:
+1. Loads genotype data and model parameters
+2. Predicts trait values using the loaded models
+3. Saves predictions in a Phenomes struct
+4. Returns the path to the saved predictions file
+
+# Output File Format
+- For single trait prediction: `{prefix}{model_name}-predicted_phenomes.jld2`
+- For multi-trait prediction: `{prefix}{hash}-predicted_phenomes.jld2`
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)

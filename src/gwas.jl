@@ -1,9 +1,39 @@
 """
     gwas(input::GBInput)::Vector{String}
 
-Perform genome-wide association study.
-Outputs are JLD2 files, each containing the Fit struct for each model-trait-population combination.
-Note that the `b_hat` field of each Fit struct contains t-statistics for `gwasols` and z-statistics for the other GWAS models, instead of allele effects in genomic prediction models.
+Perform genome-wide association study (GWAS) analysis on genomic and phenotypic data.
+
+# Arguments
+- `input::GBInput`: A GBInput struct containing:
+  - `fname_geno`: Path to genotype data file
+  - `fname_pheno`: Path to phenotype data file
+  - `gwas_models`: Vector of GWAS models to apply
+  - `traits`: Optional vector of trait names to analyze
+  - `populations`: Optional vector of population names to analyze
+  - `verbose`: Boolean flag for detailed output
+
+# Returns
+- `Vector{String}`: Paths to generated JLD2 files containing Fit structs for each model-trait-population combination
+
+# Details
+The function performs GWAS analysis for each combination of:
+- GWAS models specified in input
+- Traits found in phenotype data
+- Populations specified (if none specified, analyzes all data together)
+
+For each combination, it:
+1. Filters data for the specific population if specified
+2. Fits the GWAS model
+3. Saves results to a JLD2 file containing a Fit struct
+
+The Fit struct's `b_hat` field contains:
+- t-statistics for `gwasols` model
+- z-statistics for other GWAS models
+
+# Notes
+- Output files are named as: `<prefix>_model_<model>-trait_<trait>-population_<pop>.jld2`
+- Will throw an error if output files already exist
+- When verbose=true, displays a progress bar and correlation heatmap of estimated allele effects
 
 # Example
 ```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
