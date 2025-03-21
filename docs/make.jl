@@ -15,9 +15,11 @@ makedocs(;
     ),
     pages = [
         "Home" => "index.md",
-        "API" => "api.md",
-        "Methods Reference" => "references.md",
+        "Manual" => "manual.md",
+        "Reference" => "references.md",
     ],
+    doctest = false,
+    checkdocs=:exports,
 )
 
 deploydocs(; repo = "github.com/GenomicBreeding/GenomicBreeding.jl", devbranch = "main")

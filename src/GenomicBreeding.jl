@@ -48,6 +48,4 @@ export cv, fit, predict, gwas
 export submitslurmarrayjobs
 export plot
 
-
-
 end

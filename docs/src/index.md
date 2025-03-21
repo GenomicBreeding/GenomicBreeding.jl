@@ -20,7 +20,7 @@ curl -fsSL https://install.julialang.org | sh
 type -a julia
 ```
 
-Currently, [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl) is dependent on [R](https://www.r-project.org/) and the package [BGLR](https://github.com/gdlc/BGLR-R) for Bayes A, Bayes B and Bayes C models. Because of this we require that [R](https://www.r-project.org/) and [BGLR](https://github.com/gdlc/BGLR-R) be installed. To help with this, you may install all the requirements via [Conda](https://www.anaconda.com/docs/getting-started/miniconda/main) using the environment file: [`GenomicBreeding_conda.yml`](GenomicBreeding_conda.yml). We aim to have a pure Julia implementation of Bayesian models using [Turing.jl](https://turinglang.org/) in the near future (we just need to speed-up the models a bit).
+Currently, [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl) is dependent on [R](https://www.r-project.org/) and the package [BGLR](https://github.com/gdlc/BGLR-R) for Bayes A, Bayes B and Bayes C models. Because of this we require that [R](https://www.r-project.org/) and [BGLR](https://github.com/gdlc/BGLR-R) be installed. To help with this, you may install all the requirements via [Conda](https://www.anaconda.com/docs/getting-started/miniconda/main) using the environment file: [`GenomicBreeding_conda.yml`](https://github.com/GenomicBreeding/GenomicBreeding.jl/GenomicBreeding_conda.yml). We aim to have a pure Julia implementation of Bayesian models using [Turing.jl](https://turinglang.org/) in the near future (we just need to speed-up the models a bit).
 
 
 Install the [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) library in Julia:
@@ -161,3 +161,21 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 ## License
 
 The `GenomicBreeding` module is licensed under the GPLv3 License. See the [LICENSE.md](https://github.com/GenomicBreeding/GenomicBreeding.jl/blob/main/LICENSE.md) file for more details.
+
+<!-- ## Docs
+
+```@autodocs
+Modules = [GenomicBreeding]
+``` -->
+
+## Library Outline
+
+```@contents
+Pages = ["references.md"]
+```
+
+## [Index](@id main-index)
+
+```@index
+Pages = ["references.md"]
+```
