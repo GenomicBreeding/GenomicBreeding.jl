@@ -36,7 +36,6 @@ export checkdims, labeltofname, saveplots
 using StatsBase, DataFrames, Dates
 using ProgressMeter, UnicodePlots
 
-
 include("io.jl")
 include("genomic_prediction.jl")
 include("gwas.jl")
