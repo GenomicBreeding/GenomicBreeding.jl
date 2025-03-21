@@ -3,7 +3,6 @@
 Documentation for the `GenomicBreeding` module.
 
 ```@contents
-Depth = 5
 ```
 
 ## Overview
@@ -49,13 +48,13 @@ Pkg.add(["StatsBase", "MixedModels", "MultivariateStats", "UnicodePlots", "Color
 
 ## Quickstart
 
-- [Genomic prediction](#genomic-prediction)
-- [Genome-wide association study](#genome-wide-association-study)
-- [Genotype data filtering and imputation](#genotype-data-filtering-and-imputation)
-- [Phenotype data analyses](#phenotype-data-analyses)
-- [Cluster analyses](#cluster-analyses)
-- [Plotting](#plotting)
-- [Mating simulations](#mating-simulations)
+- [Genomic prediction](@ref)
+- [Genome-wide association study](@ref)
+- [Genotype data filtering and imputation](@ref)
+- [Phenotype data analyses](@ref)
+- [Cluster analyses](@ref)
+- [Plotting](@ref)
+- [Mating simulations](@ref)
 
 ### Genomic prediction
 
@@ -163,7 +162,7 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 
 - [Variant call format](@ref)
 - [Allele frequency table](@ref)
-- [JLD2](@red)
+- [JLD2](@ref)
 - [Trials table](@ref)
 - [Phenomes table](@ref) 
 
