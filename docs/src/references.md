@@ -5,5 +5,5 @@ Pages = ["references.md"]
 ```
 
 ```@autodocs
-Modules = [GenomicBreeding, GenomicBreeding.GBIO]
+Modules = [GenomicBreeding]
 ```
