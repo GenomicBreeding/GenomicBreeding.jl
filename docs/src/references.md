@@ -1,5 +1,12 @@
 # Methods reference
 
+## Contents 
+
+```@contents
+Pages = ["references.md"]
+Depth = 3
+```
+
 ## GenomicBreeding.jl
 
 ```@index
