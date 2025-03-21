@@ -3,6 +3,8 @@
 Documentation for the `GenomicBreeding` module.
 
 ```@contents
+Pages = ["index.md"]
+Depth = 3
 ```
 
 ## Overview
@@ -215,8 +217,8 @@ Each column must be sorted exactly as this: starting with "**chrom**" for chromo
 An additional header may be included, for example:
 
 | chrom | pos | all_alleles | allele | entry_1 | entry_2 | entry_3 |
-| chrom | pos | all_alleles | allele | pop_ABC | pop_DEF | pop_XYZ |
 | :---- | :-- | :---------- | :----- | :------ | :------ | :------ |
+| chrom | pos | all_alleles | allele | pop_ABC | pop_DEF | pop_XYZ |
 | chr_1 | 123 | A\|T        | A      | 0.51    | 0.25    | 0.25    |
 
 where the first header is the same as the detailed above, while the second header replaces the entry names with the corresponding population or group the entries belong to.
