@@ -3,6 +3,7 @@
 Documentation for the `GenomicBreeding` module.
 
 ```@contents
+Depth = 5
 ```
 
 ## Overview
@@ -160,11 +161,11 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 
 ## File formats
 
-- [Variant call format](#variant-call-format)
-- [Allele frequency table](#allele-frequency-table)
-- [JLD2](#jld2)
-- [Trials table](#trials-table)
-- [Phenomes table](phenomes-table) 
+- [Variant call format](@ref)
+- [Allele frequency table](@ref)
+- [JLD2](@red)
+- [Trials table](@ref)
+- [Phenomes table](@ref) 
 
 ### Variant call format 
 
