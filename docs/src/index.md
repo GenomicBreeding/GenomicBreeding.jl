@@ -1,6 +1,6 @@
 # GenomicBreeding.jl
 
-Documentation for the `GenomicBreeding` module.
+## Contents
 
 ```@contents
 Pages = ["index.md"]
