@@ -5,7 +5,7 @@ using Documenter
 DocMeta.setdocmeta!(GenomicBreeding, :DocTestSetup, :(using GenomicBreeding); recursive = true)
 
 makedocs(;
-    modules = [GenomicBreeding],
+    modules = [GenomicBreeding, GBIO, GBModels, GBPlots],
     authors = "jeffersonparil@gmail.com",
     sitename = "GenomicBreeding.jl",
     format = Documenter.HTML(;
