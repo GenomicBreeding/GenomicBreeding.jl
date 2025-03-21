@@ -1,15 +1,13 @@
 # GenomicBreeding.jl
 
-## Contents
+## Overview
+
+The `GenomicBreeding` module provides a comprehensive suite of tools for genomic prediction, genome-wide association studies (GWAS), and data handling in genomic breeding. It integrates functionalities from `GBCore`, `GBIO`, `GBModels`, and `GBPlots` to offer efficient and scalable solutions for genetic data analysis and visualisation.
 
 ```@contents
 Pages = ["index.md"]
 Depth = 3
 ```
-
-## Overview
-
-The `GenomicBreeding` module provides a comprehensive suite of tools for genomic prediction, genome-wide association studies (GWAS), and data handling in genomic breeding. It integrates functionalities from `GBCore`, `GBIO`, `GBModels`, and `GBPlots` to offer efficient and scalable solutions for genetic data analysis and visualisation.
 
 ## Installation
 
