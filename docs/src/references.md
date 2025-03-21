@@ -2,8 +2,8 @@
 
 ```@index
 Pages = ["references.md"]
-``` -->
-<!-- 
+```
+
 ```@autodocs
-Modules = [GenomicBreeding]
+Modules = [GenomicBreeding, GBIO, GBModels, GBPlots, GBPlotsInteractive]
 ```
