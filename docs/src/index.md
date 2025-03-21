@@ -162,18 +162,6 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 
 The `GenomicBreeding` module is licensed under the GPLv3 License. See the [LICENSE.md](https://github.com/GenomicBreeding/GenomicBreeding.jl/blob/main/LICENSE.md) file for more details.
 
-<!-- ## Docs
-
-```@autodocs
-Modules = [GenomicBreeding]
-``` -->
-
-## Library Outline
-
-```@contents
-Pages = ["references.md"]
-```
-
 ## [Index](@id main-index)
 
 ```@index

@@ -2,7 +2,7 @@
 
 ## Main
 
-- `GBInput`: Struct for input data.
+- [`GBInput`](https://genomicbreeding.github.io/GenomicBreeding.jl/dev/references/#GenomicBreeding.GBInput): Struct for input data.
 - `checkinputs`: Check input data.
 - `loadgenomesphenomes`: Load genomic and phenomic data.
 - `loadcvs`: Load cross-validation data.

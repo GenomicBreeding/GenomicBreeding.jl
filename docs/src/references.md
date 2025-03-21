@@ -1,9 +1,9 @@
 # Methods reference
 
-<!-- ```@index
+```@index
 Pages = ["references.md"]
 ``` -->
 <!-- 
 ```@autodocs
 Modules = [GenomicBreeding]
-``` -->
+```
