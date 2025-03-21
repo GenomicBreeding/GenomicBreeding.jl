@@ -1,11 +1,11 @@
-using GenomicBreeding, GBIO, GBModels, GBPlots
+using GenomicBreeding
 using Documenter
 
 
 DocMeta.setdocmeta!(GenomicBreeding, :DocTestSetup, :(using GenomicBreeding); recursive = true)
 
 makedocs(;
-    modules = [GenomicBreeding, GBIO, GBModels, GBPlots],
+    modules = [GenomicBreeding],
     authors = "jeffersonparil@gmail.com",
     sitename = "GenomicBreeding.jl",
     format = Documenter.HTML(;
