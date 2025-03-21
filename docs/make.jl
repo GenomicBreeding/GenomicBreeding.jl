@@ -1,4 +1,4 @@
-using GenomicBreeding, GBIO, GBModels, GBPlots, GBPlotsInteractive
+using GenomicBreeding, GBIO, GBModels, GBPlots
 using Documenter
 
 
