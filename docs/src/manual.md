@@ -1,5 +1,10 @@
 # Manual
 
+```@contents
+Pages = ["manual.md"]
+Depth = 3
+```
+
 ## Main
 
 - [`GBInput`](https://genomicbreeding.github.io/GenomicBreeding.jl/dev/references/#GenomicBreeding.GBInput): Struct for input data.
