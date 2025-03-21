@@ -1,7 +1,7 @@
 # Methods reference
 
-```@index
-```
+<!-- ```@index
+``` -->
 
 ```@autodocs
 Modules = [GenomicBreeding]

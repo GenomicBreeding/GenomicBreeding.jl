@@ -1,149 +1,163 @@
-```@meta
-CurrentModule = GenomicBreeding
-```
-
 # GenomicBreeding.jl
 
 Documentation for the `GenomicBreeding` module.
 
+```@contents
+```
+
 ## Overview
 
-The `GenomicBreeding` module provides a comprehensive suite of tools for genomic prediction, genome-wide association studies (GWAS), and data handling in genomic breeding. It integrates functionalities from `GBCore`, `GBIO`, `GBModels`, and `GBPlots` to offer efficient and scalable solutions for genetic data analysis and visualization.
+The `GenomicBreeding` module provides a comprehensive suite of tools for genomic prediction, genome-wide association studies (GWAS), and data handling in genomic breeding. It integrates functionalities from `GBCore`, `GBIO`, `GBModels`, and `GBPlots` to offer efficient and scalable solutions for genetic data analysis and visualisation.
 
 ## Installation
 
-To install the `GenomicBreeding` module, use the following command:
+We designed [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) to work on an HPC running Linux (the various components, i.e. [GBCore.jl](https://github.com/GenomicBreeding/GBCore.jl), [GBIO.jl](https://github.com/GenomicBreeding/GBIO.jl), [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl), and [GBPlots.jl](https://github.com/GenomicBreeding/GBPlots.jl) work on a single Linux PC too).
+
+Currently, we require that you install [Julia](https://julialang.org/) on your home directory in you HPC cluster via:
+
+```shell
+curl -fsSL https://install.julialang.org | sh
+type -a julia
+```
+
+Currently, [GBModels.jl](https://github.com/GenomicBreeding/GBModels.jl) is dependent on [R](https://www.r-project.org/) and the package [BGLR](https://github.com/gdlc/BGLR-R) for Bayes A, Bayes B and Bayes C models. Because of this we require that [R](https://www.r-project.org/) and [BGLR](https://github.com/gdlc/BGLR-R) be installed. To help with this, you may install all the requirements via [Conda](https://www.anaconda.com/docs/getting-started/miniconda/main) using the environment file: [`GenomicBreeding_conda.yml`](GenomicBreeding_conda.yml). We aim to have a pure Julia implementation of Bayesian models using [Turing.jl](https://turinglang.org/) in the near future (we just need to speed-up the models a bit).
+
+
+Install the [GenomicBreeding.jl](https://github.com/GenomicBreeding/GenomicBreeding.jl) library in Julia:
 
 ```julia
 using Pkg
-Pkg.add("GenomicBreeding")
+Pkg.add("https://github.com/GenomicBreeding/GenomicBreeding.jl")
 ```
 
-## Usage
+Feel free to install the [GenomicBreeding.jl components](https://github.com/GenomicBreeding) as well as various other useful libraries:
 
-Below are the main functionalities provided by the `GenomicBreeding` module:
+```julia
+using Pkg
+GB_components = [
+    "https://github.com/GenomicBreeding/GBCore.jl",
+    "https://github.com/GenomicBreeding/GBIO.jl",
+    "https://github.com/GenomicBreeding/GBModels.jl",
+    "https://github.com/GenomicBreeding/GBPlots.jl",
+]
+for P in GB_components
+    Pkg.add(url=P)
+end
+Pkg.add(["StatsBase", "MixedModels", "MultivariateStats", "UnicodePlots", "ColorSchemes", "CairoMakie"])
+```
 
-### Main API
+## Quickstart
 
-- `GBInput`: Struct for input data.
-- `checkinputs`: Check input data.
-- `loadgenomesphenomes`: Load genomic and phenomic data.
-- `loadcvs`: Load cross-validation data.
-- `loadfits`: Load model fits.
-- `prepareinputs`: Prepare input data.
-- `prepareoutprefixandoutdir`: Prepare output prefix and directory.
-- `cv`: Perform cross-validation.
-- `fit`: Fit models.
-- `predict`: Make predictions.
-- `gwas`: Perform genome-wide association studies.
-- `submitslurmarrayjobs`: Submit SLURM array jobs.
-- `plot`: General plotting function.
+- [Genomic prediction](#genomic-prediction)
+- [Genome-wide association study](#genome-wide-association-study)
+- [Genotype data filtering and imputation](#genotype-data-filtering-and-imputation)
+- [Phenotype data analyses](#phenotype-data-analyses)
+- [Cluster analyses](#cluster-analyses)
+- [Plotting](#plotting)
+- [Mating simulations](#mating-simulations)
 
-### Core Data Structures
+### Genomic prediction
 
-- `AbstractGB`: Abstract type for genomic breeding data.
-- `Genomes`: Struct for genomic data.
-- `Phenomes`: Struct for phenomic data.
-- `Trials`: Struct for trials data.
-- `SimulatedEffects`: Struct for simulated genetic effects.
-- `TEBV`: Struct for trial-estimated breeding values.
-- `Fit`: Struct for genotype-to-phenotype models.
-- `CV`: Struct for cross-validation of genotype-to-phenotype models.
+#### Example 1: using simulated data
 
-### General Functions
+Here's a simple example using simulated data to perform replicated k-fold cross validation:
 
-- `clone`: Clone a struct.
-- `hash`: Compute the hash of a struct.
-- `==`: Check equality of structs.
-- `checkdims`: Check dimensions of genomic data.
-- `dimensions`: Get dimensions of genomic data.
-- `loci_alleles`: Get loci alleles.
-- `loci`: Get loci.
-- `plot`: Plot genomic data.
-- `slice`: Slice genomic data.
-- `filter`: Filter genomic data.
-- `tabularise`: Convert genomic data to a tabular format.
-- `summarise`: Summarise genomic data.
+```julia
+# It is always a good idea to keep all your packages updated
+using Pkg; Pkg.update()
+# Load GenomicBreeding
+using GenomicBreeding
+# Load plotting and GP model functions
+import GenomicBreeding: plot, lasso, bayesa
+# Simulate genotype and phenotype data
+genomes = simulategenomes(n=300, l=1_000, verbose=true)
+genomes.populations[1:100] .= "pop1"; genomes.populations[101:200] .= "pop2"; genomes.populations[201:300] .= "pop3" # simulate multiple populations
+trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
+phenomes = extractphenomes(trials)
+fname_geno = writedelimited(genomes, fname="test-geno.tsv")
+fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
+# Input struct documentation
+@doc GBInput
+# Setup the input struct
+input = GBInput(
+    fname_geno=fname_geno, 
+    fname_pheno=fname_pheno,
+    anaysis=cv, # set analysis to use the `cv` function for replicated k-fold cross-validation
+    models = [lasso, bayesa],
+    n_folds=2, 
+    n_replications=2, 
+    SLURM_job_name="testGB",
+    SLURM_account_name="dbiopast1",
+    SLURM_cpus_per_task=2, 
+    SLURM_mem_G=5, 
+    SLURM_time_limit_dd_hhmmss="00-00:15:00",
+    SLURM_max_array_jobs_running=10,
+    verbose=true
+)
+# Preliminary look at the genotype and phenotype data
+plot(input=input, format="png", plot_size=(700, 500))
+# Documentation of the main user interface function (take note of the currently available analyses)
+@doc submitslurmarrayjobs
+# Submit the Slurm array jobs
+# Note that here you will be prompted to enter YES to proceed.
+outdir = submitslurmarrayjobs(input)
+# Monitor the Slurm jobs
+run(`sh -c 'squeue -u $USER'`)
+run(`sh -c 'ls -lhtr slurm-*_*.out'`)
+run(`sh -c 'cat slurm-*_*.out'`)
+run(`sh -c 'tail slurm-*_*.out'`)
+run(`sh -c 'grep -i "err" slurm-*_*.out'`)
+run(`sh -c 'grep -i "err" slurm-*_*.out | cut -d: -f1 | sort | uniq'`)
+readdir(outdir)
+# Once the array jobs have finishes or at least a couple of jobs have finished, run below.
+# Rerun as you often as wish to update the plots.
+# You may exit Julia and just run the plotting function below after correctly defining input::GBInput above.
+plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_phenomes=true, overwrite=true)
+```
 
-### Simulation Functions
+#### Example 2: using empirical data
 
-- `simulategenomes`: Simulate genomic data.
-- `simulateeffects`: Simulate genetic effects.
-- `simulategenomiceffects`: Simulate genomic effects.
-- `simulatetrials`: Simulate trials data.
+```julia
+# TODO
+# with GP per se on unphenotyped set
+```
 
-### Phenotype Analysis Functions
+### Genome-wide association study
 
-- `countlevels`: Count levels in phenomic data.
-- `@string2formula`: Convert string to formula.
-- `trialsmodelsfomulae!`: Generate trial models formulae.
-- `analyse`: Analyse phenomic data.
-- `extractphenomes`: Extract phenomic data.
-- `@stringevaluation`: Evaluate string expressions.
-- `addcompositetrait`: Add composite trait to phenomic data.
+```julia
+# TODO
+```
 
-### Input/Output Functions (GBIO)
+### Genotype data filtering and imputation
 
-- `levenshteindistance`: Compute Levenshtein distance for fuzzy matching.
-- `isfuzzymatch`: Check for fuzzy matches.
-- `readjld2`: Read JLD2 files.
-- `readdelimited`: Read delimited text files.
-- `readvcf`: Read VCF files.
-- `writejld2`: Write JLD2 files.
-- `writedelimited`: Write delimited text files.
-- `writevcf`: Write VCF files.
+```julia
+# TODO
+```
 
-### Genomic Prediction Functions (GBModels)
+### Phenotype data analyses
 
-- `metrics`: Compute metrics for model evaluation.
-- `extractxyetc`: Extract features and targets for modeling.
-- `predict`: Make predictions using trained models.
-- `grmsimple`: Compute genomic relationship matrix (simple).
-- `grmploidyaware`: Compute genomic relationship matrix (ploidy-aware).
-- `gwasprep`: Prepare data for GWAS.
-- `gwasols`: Perform GWAS using ordinary least squares.
-- `gwaslmm`: Perform GWAS using linear mixed models.
-- `loglikreml`: Compute log-likelihood for REML.
-- `gwasreml`: Perform GWAS using REML.
-- `square`, `invoneplus`, `log10epsdivlog10eps`, `mult`, `addnorm`, `raise`: Utility functions for transformations.
-- `transform1`, `transform2`, `epistasisfeatures`, `@string2operations`, `reconstitutefeatures`: Functions for feature engineering.
-- `bglr`, `bayesian`: Bayesian genomic prediction models.
-- `turing_bayesG`, `turing_bayesGs`, `turing_bayesGπ`, `turing_bayesGπs`, `turing_bayesL`, `turing_bayesLs`, `turing_bayesLπ`, `turing_bayesLπs`, `turing_bayesT`, `turing_bayesTπ`, `turing_bayesG_logit`: Turing Bayesian models.
-- `ols`, `ridge`, `lasso`, `bayesa`, `bayesb`, `bayesc`: Linear and Bayesian regression models.
-- `validate`: Validate models.
-- `cvmultithread!`, `cvbulk`: Cross-validation functions.
-- `cvperpopulation`, `cvpairwisepopulation`, `cvleaveonepopulationout`: Cross-validation strategies.
+```julia
+# TODO
+```
 
-### Plotting Functions (GBPlots)
+### Cluster analyses
 
-- `PlotsGB`: General plotting functions.
-- `DistributionPlots`: Distribution plots.
-- `ViolinPlots`: Violin plots.
-- `CorHeatPlots`: Correlation heatmaps.
-- `TreePlots`: Tree plots.
-- `BarPlots`: Bar plots.
-- `BoxPlots`: Box plots.
-- `PCBiPlots`: Principal component biplots.
-- `checkdims`: Check dimensions for plotting.
-- `labeltofname`: Convert labels to filenames.
-- `saveplots`: Save plots to files.
+```julia
+# TODO
+```
 
-## Contributing
+### Plotting
 
-Contributions to the `GenomicBreeding` module are welcome. Please submit pull requests or open issues on the GitHub repository.
+```julia
+# TODO
+```
+
+### Mating simulations
+
+```julia
+# TODO
+```
 
 ## License
 
-The `GenomicBreeding` module is licensed under the MIT License. See the LICENSE file for more details.
-
-
-<!-- # GenomicBreeding
-
-Documentation for [GenomicBreeding](https://github.com/jeffersonfparil/GenomicBreeding.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [GenomicBreeding]
-``` -->
+The `GenomicBreeding` module is licensed under the GPLv3 License. See the [LICENSE.md](https://github.com/GenomicBreeding/GenomicBreeding.jl/blob/main/LICENSE.md) file for more details.
