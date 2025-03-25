@@ -39,7 +39,7 @@ The function supports various genomic analyses including:
 ```julia
 using GenomicBreeding, StatsBase;
 using GenomicBreeding: cv, fit, predict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
-genomes = GenomicBreeding.GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+genomes = GenomicBreeding.GBCore.simulategenomes(n=300, l=1_000, n_populations=3, verbose=false);
 trials, _ = GenomicBreeding.GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 phenomes = extractphenomes(trials);
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
@@ -196,6 +196,7 @@ function submitslurmarrayjobs(input::GBInput)::String
         string("#SBATCH --nodes=", input.SLURM_nodes_per_array_job),
         string("#SBATCH --ntasks=", input.SLURM_tasks_per_node),
         string("#SBATCH --cpus-per-task=", input.SLURM_cpus_per_task),
+        string("#SBATCH --gres=gpu:", input.SLURM_gpus),
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         "LD_LIBRARY_PATH=\"\"",
@@ -211,6 +212,9 @@ function submitslurmarrayjobs(input::GBInput)::String
     # Remove the account name, partion and Julia module (use manually installed Julia) if empty
     if input.SLURM_account_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
+    end
+    if input.SLURM_gpus == 0
+        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --gres=gpu:"), slurm_script))]
     end
     if input.SLURM_partition_name == ""
         slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]

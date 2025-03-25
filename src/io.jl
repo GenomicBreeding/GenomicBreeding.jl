@@ -79,6 +79,7 @@ mutable struct GBInput <: AbstractGB
     SLURM_nodes_per_array_job::Int64
     SLURM_tasks_per_node::Int64
     SLURM_cpus_per_task::Int64
+    SLURM_gpus::Int64
     SLURM_mem_G::Int64
     SLURM_time_limit_dd_hhmmss::String
     SLURM_max_array_jobs_running::Int64
@@ -110,6 +111,7 @@ mutable struct GBInput <: AbstractGB
         SLURM_nodes_per_array_job::Int64 = 1,
         SLURM_tasks_per_node::Int64 = 1,
         SLURM_cpus_per_task::Int64 = 1,
+        SLURM_gpus::Int64 = 0,
         SLURM_mem_G::Int64 = 1,
         SLURM_time_limit_dd_hhmmss::String = "00-01:00:00",
         SLURM_max_array_jobs_running::Int64 = 20,
@@ -154,6 +156,7 @@ mutable struct GBInput <: AbstractGB
             SLURM_nodes_per_array_job,
             SLURM_tasks_per_node,
             SLURM_cpus_per_task,
+            SLURM_gpus,
             Float64(SLURM_mem_G),
             SLURM_time_limit_dd_hhmmss,
             SLURM_max_array_jobs_running,
@@ -327,10 +330,10 @@ Returns a vector of error messages. An empty vector indicates all inputs are val
   - All specified allele effects files must exist
 
 # Examples
-```jldoctest; setup = :(using GBCore, GenomicBreeding, StatsBase)
-julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes = simulategenomes(n=300, n_populations=3, verbose=false);
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -440,10 +443,10 @@ A tuple containing:
 - Filters markers based on minimum allele frequency (maf)
 
 # Examples
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
-julia> genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreeding)
+julia> genomes = simulategenomes(n=300, n_populations=3, verbose=false);
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -465,9 +468,9 @@ julia> rm.([fname_geno, fname_pheno]);
 ```
 """
 function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{String},Vector{String}}
-    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
-    # phenomes = extractphenomes(trials)
+    # genomes = simulategenomes(n=300, n_populations=3, verbose=false);
+    # trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # phenomes = extractphenomes(trials); rm("test-geno.tsv", force=true); rm("test-pheno.tsv", force=true);
     # fname_geno = writedelimited(genomes, fname="test-geno.tsv")
     # # fname_geno = writejld2(genomes, fname="test-geno.jld2")
     # # fname_geno = writevcf(genomes, fname="test-geno.vcf") ### Will have unknown population groupings
@@ -694,7 +697,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
         genomes = slice(genomes, idx_entries = idx_entries)
     end
     # Filter genomes by maf (minimum allele frequency)
-    genomes = filter(genomes, maf)
+    genomes, _omitted_loci_alleles = filter(genomes, maf)
     # Show dimensions of the input genomes and phenomes after merging and filterings
     if verbose
         println("################")
@@ -942,7 +945,7 @@ julia> rm.([fname_geno, fname_pheno, "dummy.jld2"]);
 ```
 """
 function prepareinputs(input::GBInput)::Vector{GBInput}
-    # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+    # genomes = GBCore.simulategenomes(n=300, n_populations=3, verbose=false);
     # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;

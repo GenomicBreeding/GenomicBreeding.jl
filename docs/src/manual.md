@@ -5,6 +5,11 @@ Pages = ["manual.md"]
 Depth = 3
 ```
 
+## TODO
+- links
+- add explanations
+- add examples
+
 ## Main
 
 - [`GBInput`](https://genomicbreeding.github.io/GenomicBreeding.jl/dev/references/#GenomicBreeding.GBInput): Struct for input data.
@@ -63,6 +68,10 @@ Depth = 3
 - `extractphenomes`: Extract phenomic data.
 - `@stringevaluation`: Evaluate string expressions.
 - `addcompositetrait`: Add composite trait to phenomic data.
+
+## Phenotype Analysis Functions
+
+- `impute`: Impute missing genotype data-points
 
 ## Input/Output Functions (GBIO)
 

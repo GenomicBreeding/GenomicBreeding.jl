@@ -13,13 +13,9 @@ makedocs(;
         edit_link = "main",
         assets = String[],
     ),
-    pages = [
-        "Home" => "index.md",
-        "Manual" => "manual.md",
-        "Reference" => "references.md",
-    ],
+    pages = ["Home" => "index.md", "Manual" => "manual.md", "Reference" => "references.md"],
     doctest = false,
-    checkdocs=:exports,
+    checkdocs = :exports,
 )
 
 deploydocs(; repo = "github.com/GenomicBreeding/GenomicBreeding.jl", devbranch = "main")

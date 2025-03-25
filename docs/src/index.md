@@ -122,6 +122,16 @@ plot(input=input, format="png", plot_size=(700, 500), skip_genomes=true, skip_ph
 # with GP per se on unphenotyped set
 ```
 
+#### Example 3: using artificial neural network and GPU support on simulated data
+
+```julia
+# TODO
+
+# Make sure to set:
+#   - `SLURM_partition_name` to the name of your HPC's GPU partition nodes,
+#   - `SLURM_additional_flags` to additional GPU-related flag, e.g. `--gres=gpu:1`
+```
+
 ### Genome-wide association study
 
 ```julia
