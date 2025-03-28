@@ -73,7 +73,7 @@ Depth = 3
 
 - `impute`: Impute missing genotype data-points
 
-## Input/Output Functions (GBIO)
+## Input/Output Functions (GenomicBreedingIO)
 
 - `levenshteindistance`: Compute Levenshtein distance for fuzzy matching.
 - `isfuzzymatch`: Check for fuzzy matches.
@@ -84,7 +84,7 @@ Depth = 3
 - `writedelimited`: Write delimited text files.
 - `writevcf`: Write VCF files.
 
-## Genomic Prediction Functions (GBModels)
+## Genomic Prediction Functions (GenomicBreedingModels)
 
 - `metrics`: Compute metrics for model evaluation.
 - `extractxyetc`: Extract features and targets for modeling.
@@ -105,7 +105,7 @@ Depth = 3
 - `cvmultithread!`, `cvbulk`: Cross-validation functions.
 - `cvperpopulation`, `cvpairwisepopulation`, `cvleaveonepopulationout`: Cross-validation strategies.
 
-## Plotting Functions (GBPlots)
+## Plotting Functions (GenomicBreedingPlots)
 
 - `PlotsGB`: General plotting functions.
 - `DistributionPlots`: Distribution plots.

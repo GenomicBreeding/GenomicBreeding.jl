@@ -1,7 +1,7 @@
 """
     mutable struct GBInput
 
-Main input struct for genomic breeding analysis (implements GBCore.AbstractGB)
+Main input struct for genomic breeding analysis (implements GenomicBreedingCore.AbstractGB)
 
 # Fields
 
@@ -261,7 +261,7 @@ julia> input == copy_input
 true
 ```
 """
-function GBCore.clone(x::GBInput)::GBInput
+function GenomicBreedingCore.clone(x::GBInput)::GBInput
     # x = GBInput(fname_geno=""); x.fname_geno="test_geno.jld2"; x.fname_pheno = "test_pheno.tsv";
     out = GBInput(fname_geno = "", fname_pheno = "")
     for field in fieldnames(typeof(x))
@@ -297,7 +297,7 @@ julia> checkdims(input)
 false
 ```
 """
-function GBCore.checkdims(input::GBInput)::Bool
+function GenomicBreedingCore.checkdims(input::GBInput)::Bool
     !isnothing(input.models) & !isnothing(input.gwas_models)
 end
 
@@ -745,12 +745,12 @@ The function searches for files with pattern "-cv-" and extension ".jld2" in the
 Invalid or failed CV results are automatically filtered out during loading.
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
-julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -839,12 +839,12 @@ The function attempts to load all JLD2 files specified in `input.fname_allele_ef
 If a file cannot be loaded, that entry will be skipped and remain `undef` in the output vector.
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
-julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -902,10 +902,10 @@ The function handles special cases:
 - Configures specific parameters for prediction tasks
 
 # Examples
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
-julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase)
+julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -945,8 +945,8 @@ julia> rm.([fname_geno, fname_pheno, "dummy.jld2"]);
 ```
 """
 function prepareinputs(input::GBInput)::Vector{GBInput}
-    # genomes = GBCore.simulategenomes(n=300, n_populations=3, verbose=false);
-    # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # genomes = GenomicBreedingCore.simulategenomes(n=300, n_populations=3, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
@@ -1052,7 +1052,7 @@ the analysis type and a hyphen.
 - `ArgumentError`: If unable to create the output directory
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase)
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase)
 julia> input = GBInput(fname_geno="some_dir/fname_geno.jld2", fname_pheno="some_dir/fname_pheno.jld2", fname_out_prefix="GBOutput/some@!_%&prefix", verbose=false);
 
 julia> fname_out_prefix = prepareoutprefixandoutdir(input)

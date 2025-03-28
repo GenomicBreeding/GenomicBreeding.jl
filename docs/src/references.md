@@ -17,23 +17,23 @@ Pages = ["references.md"]
 Modules = [GenomicBreeding]
 ```
 
-## GBCore.jl
+## GenomicBreedingCore.jl
 
-- [Stable docs](https://genomicbreeding.github.io/GBCore.jl/stable/)
-- [Dev docs](https://genomicbreeding.github.io/GBCore.jl/dev/)
+- [Stable docs](https://genomicbreeding.github.io/GenomicBreedingCore.jl/stable/)
+- [Dev docs](https://genomicbreeding.github.io/GenomicBreedingCore.jl/dev/)
 
-## GBIO.jl
+## GenomicBreedingIO.jl
 
-- [Stable docs](https://genomicbreeding.github.io/GBIO.jl/stable/)
-- [Dev docs](https://genomicbreeding.github.io/GBIO.jl/dev/)
+- [Stable docs](https://genomicbreeding.github.io/GenomicBreedingIO.jl/stable/)
+- [Dev docs](https://genomicbreeding.github.io/GenomicBreedingIO.jl/dev/)
 
-## GBModels.jl
+## GenomicBreedingModels.jl
 
-- [Stable docs](https://genomicbreeding.github.io/GBModels.jl/stable/)
-- [Dev docs](https://genomicbreeding.github.io/GBModels.jl/dev/)
+- [Stable docs](https://genomicbreeding.github.io/GenomicBreedingModels.jl/stable/)
+- [Dev docs](https://genomicbreeding.github.io/GenomicBreedingModels.jl/dev/)
 
-## GBPlots.jl
+## GenomicBreedingPlots.jl
 
-- [Stable docs](https://genomicbreeding.github.io/GBPlots.jl/stable/)
-- [Dev docs](https://genomicbreeding.github.io/GBPlots.jl/dev/)
+- [Stable docs](https://genomicbreeding.github.io/GenomicBreedingPlots.jl/stable/)
+- [Dev docs](https://genomicbreeding.github.io/GenomicBreedingPlots.jl/dev/)
  

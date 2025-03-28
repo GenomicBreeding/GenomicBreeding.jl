@@ -1,6 +1,6 @@
 module GenomicBreeding
 
-using GBCore
+using GenomicBreedingCore
 export AbstractGB, Genomes, Phenomes, Trials, SimulatedEffects, TEBV, Fit, CV
 export clone, hash, ==
 export checkdims, dimensions, loci_alleles, loci, plot, slice, filter, tabularise, summarise
@@ -8,12 +8,12 @@ export simulategenomes, simulateeffects, simulategenomiceffects, simulatetrials
 export countlevels, @string2formula, trialsmodelsfomulae!, analyse, extractphenomes
 export @stringevaluation, addcompositetrait
 
-using GBIO
+using GenomicBreedingIO
 export levenshteindistance, isfuzzymatch
 export readjld2, readdelimited, readvcf
 export writejld2, writedelimited, writevcf
 
-using GBModels
+using GenomicBreedingModels
 export metrics
 export extractxyetc, predict
 export grmsimple, grmploidyaware
@@ -29,7 +29,7 @@ export ols, ridge, lasso, bayesa, bayesb, bayesc
 export validate, cvmultithread!, cvbulk
 export cvperpopulation, cvpairwisepopulation, cvleaveonepopulationout
 
-using GBPlots
+using GenomicBreedingPlots
 export PlotsGB, DistributionPlots, ViolinPlots, CorHeatPlots, TreePlots, BarPlots, BoxPlots, PCBiPlots
 export checkdims, labeltofname, saveplots
 

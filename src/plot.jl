@@ -42,10 +42,10 @@ Creates a directory structure under `input.fname_out_prefix/plots/` with subdire
 - `cvs/`: Cross-validation visualizations
 
 # Example
-```jldoctest; setup = :(using GBCore, GBIO, GenomicBreeding, StatsBase, DataFrames)
-julia> genomes = GBCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
-julia> trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -71,8 +71,8 @@ function plot(;
     plot_size::Tuple{Int64,Int64} = (600, 450),
     overwrite::Bool = false,
 )::String
-    # # genomes = GBCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # # trials, _ = GBCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # # genomes = GenomicBreedingCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+    # # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # # phenomes = extractphenomes(trials)
     # # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
@@ -153,7 +153,7 @@ function plot(;
                 println(string("Genomes: ", plot_type))
             end
             try
-                plots = GBPlots.plot(plot_type, genomes, plot_size = plot_size)
+                plots = GenomicBreedingPlots.plot(plot_type, genomes, plot_size = plot_size)
                 append!(
                     fnames,
                     saveplots(
@@ -175,7 +175,7 @@ function plot(;
                 println(string("Phenomes: ", plot_type))
             end
             try
-                plots = GBPlots.plot(plot_type, phenomes, plot_size = plot_size)
+                plots = GenomicBreedingPlots.plot(plot_type, phenomes, plot_size = plot_size)
                 append!(
                     fnames,
                     saveplots(
@@ -205,7 +205,7 @@ function plot(;
                 println(string("Vector{CV}: ", plot_type))
             end
             try
-                plots = GBPlots.plot(plot_type, cvs, plot_size = plot_size)
+                plots = GenomicBreedingPlots.plot(plot_type, cvs, plot_size = plot_size)
                 append!(
                     fnames,
                     saveplots(
