@@ -87,7 +87,7 @@ Depth = 3
 ## Genomic Prediction Functions (GenomicBreedingModels)
 
 - `metrics`: Compute metrics for model evaluation.
-- `extractxyetc`: Extract features and targets for modeling.
+- `extractxyetc`: Extract features and targets for modelling.
 - `predict`: Make predictions using trained models.
 - `grmsimple`: Compute genomic relationship matrix (simple).
 - `grmploidyaware`: Compute genomic relationship matrix (ploidy-aware).
