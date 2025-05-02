@@ -1,15 +1,17 @@
 module GenomicBreeding
 
 using GenomicBreedingCore
-export AbstractGB, Genomes, Phenomes, Trials, SimulatedEffects, TEBV, Fit, CV, GRM
+export AbstractGB, Genomes, Phenomes, Trials, SimulatedEffects, BLR, TEBV, Fit, CV, GRM
 export clone, hash, ==
-export checkdims, dimensions, loci_alleles, loci, distances, plot, tabularise, summarise
-export slice, sparsities, filter, filterbysparsity, filterbymaf, filterbypca, filterbysnplist
+export checkdims, dimensions, loci_alleles, loci, distances, plot, tabularise, summarise, aggregateharvests
+export slice, sparsities, filter, filterbysparsity, filterbymaf, filterbypca, filterbysnplist, extracteffects
 export simulatechromstruct,
     simulateposandalleles, simulatepopgroups, simulateldblocks, simulateperpopμΣ, simulateallelefreqs!
 export simulategenomes, simulateeffects, simulategenomiceffects, simulatetrials
 export histallelefreqs, simulatemating
 export countlevels, @string2formula, trialsmodelsfomulae!, analyse, extractphenomes
+export extractXb,
+    checkandfocalterms, instantiateblr, turingblr, extractmodelinputs, turingblrmcmc!, removespatialeffects!
 export @stringevaluation, addcompositetrait
 export maskmissing!, divideintomockscaffolds, estimateld, estimatedistances, knni, knnioptim, impute
 export inflatediagonals!, grmsimple, grmploidyaware
