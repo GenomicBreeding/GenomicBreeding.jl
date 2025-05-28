@@ -55,8 +55,7 @@ using GenomicBreeding
 # Load plotting and GP model functions
 import GenomicBreeding: plot, lasso, bayesa
 # Simulate genotype and phenotype data
-genomes = simulategenomes(n=300, l=1_000, verbose=true)
-genomes.populations[1:100] .= "pop1"; genomes.populations[101:200] .= "pop2"; genomes.populations[201:300] .= "pop3" # simulate multiple populations
+genomes = simulategenomes(n=300, l=1_000, n_populations=3, verbose=true)
 trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
 phenomes = extractphenomes(trials)
 fname_geno = writedelimited(genomes, fname="test-geno.tsv")
@@ -67,12 +66,12 @@ fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
 input = GBInput(
     fname_geno=fname_geno, 
     fname_pheno=fname_pheno,
-    anaysis=cv, # set analysis to use the `cv` function for replicated k-fold cross-validation
-    models = [lasso, bayesa],
+    analysis=cv, # set analysis to use the `cv` function for replicated k-fold cross-validation
+    models=[lasso, bayesa],
     n_folds=2, 
     n_replications=2, 
     SLURM_job_name="testGB",
-    SLURM_account_name="dbiopast1",
+    SLURM_account_name="dbiof1",
     SLURM_cpus_per_task=2, 
     SLURM_mem_G=5, 
     SLURM_time_limit_dd_hhmmss="00-00:15:00",

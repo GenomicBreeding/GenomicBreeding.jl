@@ -201,6 +201,7 @@ function plot(;
             end
         end
         for plot_type in [BarPlots, BoxPlots]
+            # plot_type = BarPlots
             if input.verbose
                 println(string("Vector{CV}: ", plot_type))
             end
