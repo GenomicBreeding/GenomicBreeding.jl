@@ -764,7 +764,7 @@ julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, fname_out
 
 julia> fnames_cvs, fnames_notes = cv(input);
 
-julia> cvs = loadcvs(input);
+julia> cvs = loadcvs(input, verbose=false);
 
 julia> length(cvs) == length(fnames_cvs)
 true
