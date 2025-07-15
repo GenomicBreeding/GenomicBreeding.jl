@@ -801,16 +801,25 @@ function loadcvs(input::GBInput; min_train_size::Int64 = 10, verbose::Bool=true)
     fnames_cvs = joinpath.(directory_name, files[idx])
     # println(idx) 
     # println(fnames_cvs) 
+    cvs::Vector{CV} = begin
+        fit = Fit(n=1, l=2)
+        cv = CV("replication_1", "fold_1", fit, ["population_1"], ["entry_1"], [0.0], [0.0], fit.metrics)
+        fill(cv, length(fnames_cvs))
+    end
     if verbose
         pb = ProgressMeter.Progress(length(fnames_cvs), desc="Loading CVs")
     end
-    cvs::Vector{CV} = []
-    for (i, fname) in enumerate(fnames_cvs)
-        # i = 1; fname = fnames_cvs[i];
+    # thread_lock::ReentrantLock = ReentrantLock()
+    Threads.@threads for i in eachindex(fnames_cvs)
+    # @inbounds for i in eachindex(fnames_cvs)
+        # i = 1
+        fname = fnames_cvs[i]
+        if verbose
+            ProgressMeter.next!(pb)
+        end
         try
             c = readjld2(CV, fname = fname)
             # Skip folds which failed due to insufficient sizes and/or nil phenotype variance and/or training size less than 10
-
             if (
                 (length(c.fit.metrics) == 9) &&
                 !ismissing(c.metrics["cor"]) &&
@@ -818,14 +827,12 @@ function loadcvs(input::GBInput; min_train_size::Int64 = 10, verbose::Bool=true)
                 !isinf(c.metrics["cor"]) &&
                 (length(c.validation_entries) >= min_train_size)
             )
-                push!(cvs, c)
+                # @lock thread_lock cvs[i] = c
+                cvs[i] = c
             end
         catch
             # println(fname) 
             continue
-        end
-        if verbose
-            ProgressMeter.next!(pb)
         end
     end
     if verbose
