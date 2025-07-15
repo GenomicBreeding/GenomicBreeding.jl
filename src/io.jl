@@ -802,7 +802,7 @@ function loadcvs(input::GBInput; min_train_size::Int64 = 10, verbose::Bool=true)
     # println(idx) 
     # println(fnames_cvs) 
     if verbose
-        pb = ProgregressMeter.Progress(length(fnames_cvs), desc="Loading CVs")
+        pb = ProgressMeter.Progress(length(fnames_cvs), desc="Loading CVs")
     end
     cvs::Vector{CV} = []
     for (i, fname) in enumerate(fnames_cvs)
