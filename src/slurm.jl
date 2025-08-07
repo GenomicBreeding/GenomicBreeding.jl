@@ -200,6 +200,7 @@ function submitslurmarrayjobs(input::GBInput)::String
         string("#SBATCH --mem=", input.SLURM_mem_G, "G"),
         string("#SBATCH --time=", input.SLURM_time_limit_dd_hhmmss),
         "LD_LIBRARY_PATH=\"\"",
+        "export JULIA_CPU_TARGET=generic", # to prevent constant precompilations
         string("module load ", input.SLURM_module_load_R_version_name),
         string("module load ", input.SLURM_module_load_Julia_version_name),
         string(
