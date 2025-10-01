@@ -1,10 +1,11 @@
 """
-    submitslurmarrayjobs(; input::GBInput)::String
+    submitslurmarrayjobs(; input::GBInput, auto_proceed::Bool=false)::String
 
 Submit an array of Slurm jobs for genomic prediction analysis.
 
 # Arguments
 - `input::GBInput`: A GBInput struct containing all necessary parameters for job submission and analysis.
+- `auto_proceed::Bool=false`: If true, skips the interactive confirmation prompt before job submission.
 
 # Returns
 - `String`: Path to the output directory where results will be stored.
@@ -75,7 +76,7 @@ outdir = submitslurmarrayjobs(input_predict)
 run(`squeue`)
 ```
 """
-function submitslurmarrayjobs(input::GBInput)::String
+function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool=false)::String
     # genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
     # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
@@ -238,40 +239,42 @@ function submitslurmarrayjobs(input::GBInput)::String
     open(joinpath(run_outdir, "run.slurm"), "w") do file
         write(file, join(slurm_script, "\n") * "\n")
     end
-    # Ask the use interactively to confirm
-    println(
-        string(
-            "Are you sure you want to submit a total of ",
-            n_array_jobs,
-            " jobs (with a maximum of ",
-            input.SLURM_max_array_jobs_running,
-            " jobs running simultaneously) each requiring ",
-            input.SLURM_cpus_per_task,
-            " cpus and ",
-            input.SLURM_mem_G,
-            "Gb of RAM with a time limit of ",
-            input.SLURM_time_limit_dd_hhmmss,
-            "?",
-        ),
-    )
-    println("Please enter YES to proceed, otherwise enter anything else to cancel:")
-    proceed = strip(readline())
-    @show proceed == "YES"
-    if proceed != "YES"
-        println(proceed)
-        println("Cancelled.")
-        println("If this was a mistake you may submit the array jobs manually via:")
+    if !auto_proceed
+        # Ask the use interactively to confirm
         println(
-            join(
-                [
-                    "sbatch",
-                    string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
-                    joinpath(run_outdir, "run.slurm"),
-                ],
-                " ",
+            string(
+                "Are you sure you want to submit a total of ",
+                n_array_jobs,
+                " jobs (with a maximum of ",
+                input.SLURM_max_array_jobs_running,
+                " jobs running simultaneously) each requiring ",
+                input.SLURM_cpus_per_task,
+                " cpus and ",
+                input.SLURM_mem_G,
+                "Gb of RAM with a time limit of ",
+                input.SLURM_time_limit_dd_hhmmss,
+                "?",
             ),
         )
-        return outdir
+        println("Please enter YES to proceed, otherwise enter anything else to cancel:")
+        proceed = strip(readline())
+        @show proceed == "YES"
+        if proceed != "YES"
+            println(proceed)
+            println("Cancelled.")
+            println("If this was a mistake you may submit the array jobs manually via:")
+            println(
+                join(
+                    [
+                        "sbatch",
+                        string("--array=1-", n_array_jobs, "%", input.SLURM_max_array_jobs_running),
+                        joinpath(run_outdir, "run.slurm"),
+                    ],
+                    " ",
+                ),
+            )
+            return outdir
+        end
     end
     # Submit the array of jobs
     SHELL_COMMAND = Cmd([
