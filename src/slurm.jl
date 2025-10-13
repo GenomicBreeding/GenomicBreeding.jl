@@ -70,9 +70,16 @@ end
 fits = loadfits(input_fit)
 length(fits)
 
+# Calculate GEBVs
 input_predict = clone(input_fit)
 input_predict.analysis = predict
 outdir = submitslurmarrayjobs(input_predict)
+run(`squeue`)
+
+# Fit and predict in one step
+input_fitandpredict = clone(input_fit)
+input_fitandpredict.analysis = fitandpredict
+outdir = submitslurmarrayjobs(input_fitandpredict)
 run(`squeue`)
 ```
 """

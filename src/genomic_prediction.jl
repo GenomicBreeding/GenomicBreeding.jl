@@ -265,6 +265,14 @@ function fit(input::GBInput)::Vector{String}
         end
         p = UnicodePlots.heatmap(C, title = "Correlation between allele effects")
         display(p)
+        
+        
+        
+        # TODO: output this correlation matrix and/or heatmap plot
+
+
+
+
     end
     # Output filnames of the tab-delimited files containing the tables of allele effects
     fname_allele_effects_jld2s
@@ -386,4 +394,59 @@ function predict(input::GBInput)::String
         string(fname_out_prefix, hash(input), "-predicted_phenomes.jld2")
     end
     writejld2(phenomes_predicted, fname = fname_jld2)
+end
+
+"""
+    fitandpredict(input::GBInput)::Vector{String}
+
+Performs genomic prediction by first fitting the model and then making predictions.
+
+This function is a convenience wrapper that combines the `fit` and `predict` steps
+into a single operation. It first fits the model using the provided input data,
+saves the allele effects, and then generates predictions.
+
+# Arguments
+- `input::GBInput`: A GBInput object containing all necessary parameters and data for genomic prediction
+
+# Returns
+- `Vector{String}`: A vector of strings containing the prediction results
+
+# Example
+```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase, DataFrames)
+julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
+
+julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
+
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+
+julia> phenomes = extractphenomes(trials);
+
+julia> fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
+
+julia> fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
+
+julia> input = GBInput(fname_geno=fname_geno, fname_pheno=fname_pheno, analysis=GenomicBreeding.fitandpredict, fname_out_prefix="GBOutput_fitandpredict/output-", verbose=false);
+
+julia> fname_phenomes_predicted = GenomicBreeding.fitandpredict(input);
+
+julia> phenomes_predicted = readjld2(Phenomes, fname=fname_phenomes_predicted);
+
+julia> dimensions(phenomes_predicted)
+Dict{String, Int64} with 8 entries:
+  "n_total"       => 5400
+  "n_zeroes"      => 0
+  "n_nan"         => 0
+  "n_entries"     => 300
+  "n_traits"      => 18
+  "n_inf"         => 0
+  "n_populations" => 3
+  "n_missing"     => 0
+```
+"""
+function fitandpredict(input::GBInput)::String
+    input.fname_allele_effects_jld2s = fit(input)
+    input.traits = nothing # predict all traits from the fitted models
+    input.fname_out_prefix = "$(input.fname_out_prefix)-predict-"
+    input.analysis = predict
+    predict(input)
 end

@@ -62,7 +62,7 @@ include("plot.jl")
 
 export GBInput, clone, hash, ==
 export checkinputs, loadgenomesphenomes, loadcvs, loadfits, prepareinputs, prepareoutprefixandoutdir
-export cv, fit, predict, gwas
+export cv, fit, predict, fitandpredict, gwas
 export submitslurmarrayjobs
 export plot
 
