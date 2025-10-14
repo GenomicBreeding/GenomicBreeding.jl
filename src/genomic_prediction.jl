@@ -445,6 +445,7 @@ Dict{String, Int64} with 8 entries:
 """
 function fitandpredict(input::GBInput)::String
     input.analysis = fit
+    println(input)
     input.fname_allele_effects_jld2s = fit(input)
     input.traits = nothing # predict all traits from the fitted models
     input.fname_out_prefix = "$(input.fname_out_prefix)-predict-"

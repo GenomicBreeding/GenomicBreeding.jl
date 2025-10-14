@@ -1,7 +1,8 @@
 module GenomicBreeding
 
 using GenomicBreedingCore
-export AbstractGB, Genomes, Phenomes, Trials, SimulatedEffects, BLR, TEBV, Fit, CV, GRM
+export AbstractGB, Genomes, Phenomes, Trials, SimulatedEffects, TEBV, Fit, CV, GRM
+# export BLR
 export clone, hash, ==
 export checkdims, dimensions, loci_alleles, loci, distances, plot, tabularise, summarise, aggregateharvests
 export slice, sparsities, filter, filterbysparsity, filterbymaf, filterbypca, filterbysnplist, extracteffects
@@ -10,8 +11,8 @@ export simulatechromstruct,
 export simulategenomes, simulateeffects, simulategenomiceffects, simulatetrials
 export histallelefreqs, simulatemating
 export countlevels, @string2formula, trialsmodelsfomulae!, analyse, extractphenomes
-export extractXb,
-    checkandfocalterms, instantiateblr, turingblr, extractmodelinputs, turingblrmcmc!, removespatialeffects!
+export extractXb, checkandfocalterms, instantiateblr, extractmodelinputs, removespatialeffects!
+# export turingblr, turingblrmcmc!
 export @stringevaluation, addcompositetrait
 export maskmissing!, divideintomockscaffolds, estimateld, estimatedistances, knni, knnioptim, impute
 export inflatediagonals!, grmsimple, grmploidyaware
@@ -36,11 +37,11 @@ export extractxyetc, predict
 export gwasprep, gwasols, gwaslmm, loglikreml, gwasreml
 export square, invoneplus, log10epsdivlog10eps, mult, addnorm, raise
 export transform1, transform2, epistasisfeatures, @string2operations, reconstitutefeatures
-export bglr, bayesian
-export turing_bayesG, turing_bayesGs, turing_bayesGπ, turing_bayesGπs
-export turing_bayesL, turing_bayesLs, turing_bayesLπ, turing_bayesLπs
-export turing_bayesT, turing_bayesTπ
-export turing_bayesG_logit
+# export bglr, bayesian
+# export turing_bayesG, turing_bayesGs, turing_bayesGπ, turing_bayesGπs
+# export turing_bayesL, turing_bayesLs, turing_bayesLπ, turing_bayesLπs
+# export turing_bayesT, turing_bayesTπ
+# export turing_bayesG_logit
 export mlp
 export ols, ridge, lasso, bayesa, bayesb, bayesc
 export validate, cvmultithread!, cvbulk
