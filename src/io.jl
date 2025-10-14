@@ -299,6 +299,7 @@ false
 """
 function GenomicBreedingCore.checkdims(input::GBInput)::Bool
     !isnothing(input.models) & !isnothing(input.gwas_models)
+    # TODO: add more checks
 end
 
 """
@@ -352,7 +353,7 @@ false
 """
 function checkinputs(input::GBInput)::Vector{String}
     errors::Vector{String} = []
-    valid_analysis_functions = [cv, fit, predict, gwas]
+    valid_analysis_functions = [cv, fit, predict, fitandpredict, gwas]
     if !(input.analysis ∈ valid_analysis_functions)
         push!(
             errors,
@@ -972,21 +973,18 @@ function prepareinputs(input::GBInput)::Vector{GBInput}
     # Load genomes and phenomes to check their validity and dimensions
     _genomes, phenomes, traits_to_skip, populations_to_skip = loadgenomesphenomes(input)
     # Define the model/s to use depending on the type of analysis requested
-    models, traits = if input.analysis ∈ [cv, fit]
+    models, traits = if input.analysis ∈ [cv, fit, fitandpredict]
         input.models, phenomes.traits
     elseif input.analysis ∈ [predict]
         input.fname_allele_effects_jld2s, [nothing]
     elseif input.analysis ∈ [gwas]
         input.gwas_models, phenomes.traits
     else
-        # Should be alreat checked in loadgenomesphenomes(...) which calls checkinputs(..)
-        valid_analysis_functions = [cv, fit, predict, gwas]
         throw(
             ArgumentError(
                 "Analysis: `" *
                 string(input.analysis) *
-                "` invalid. Please choose from:\n\t‣ " *
-                join(string.(valid_analysis_functions), "\n\t‣ "),
+                "` invalid."
             ),
         )
     end

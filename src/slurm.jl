@@ -39,7 +39,7 @@ The function supports various genomic analyses including:
 # Example
 ```julia
 using GenomicBreeding, StatsBase;
-using GenomicBreeding: cv, fit, predict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
+using GenomicBreeding: cv, fit, predict, fitandpredict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
 genomes = GenomicBreeding.GenomicBreedingCore.simulategenomes(n=300, l=1_000, n_populations=3, verbose=false);
 trials, _ = GenomicBreeding.GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
 phenomes = extractphenomes(trials);
@@ -179,7 +179,7 @@ function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool=false)::String
         # "\tnothing",
         # "end",
         "using GenomicBreeding",
-        "import GenomicBreeding: cv, fit, predict, gwas",
+        "import GenomicBreeding: cv, fit, predict, fitandpredict, gwas",
         "import GenomicBreeding: ols, ridge, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml",
         string(
             "input = readjld2(GBInput, fname=joinpath(\"",
