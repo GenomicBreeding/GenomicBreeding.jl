@@ -79,7 +79,7 @@ run(`squeue`)
 # Fit and predict in one step
 input_fitandpredict = clone(input_fit)
 input_fitandpredict.analysis = fitandpredict
-outdir = submitslurmarrayjobs(input_fitandpredict)
+outdir = submitslurmarrayjobs(input_fitandpredict, auto_proceed=true)
 run(`squeue`)
 ```
 """

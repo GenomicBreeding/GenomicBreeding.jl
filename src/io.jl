@@ -518,7 +518,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
             end
         end
     end
-    phenomes = if (fname_pheno != "") && (input.analysis ∈ [cv, fit, gwas])
+    phenomes = if (fname_pheno != "") && (input.analysis ∈ [cv, fit, fitandpredict, gwas])
         try
             readdelimited(Phenomes, fname = fname_pheno)
         catch
