@@ -122,13 +122,13 @@ function plot(;
     end
     subdir_names = ["genomes", "phenomes", "cvs"]
     if skip_genomes
-        subdir_names = subdir_names[subdir_names.!="genomes"]
+        subdir_names = subdir_names[subdir_names .!= "genomes"]
     end
     if skip_phenomes
-        subdir_names = subdir_names[subdir_names.!="phenomes"]
+        subdir_names = subdir_names[subdir_names .!= "phenomes"]
     end
     if skip_cvs
-        subdir_names = subdir_names[subdir_names.!="cvs"]
+        subdir_names = subdir_names[subdir_names .!= "cvs"]
     end
     for subdir_name in subdir_names
         # subdir_name = subdir_names[1]
@@ -227,9 +227,7 @@ function plot(;
             println(string("Please find output plots in: `", plot_outdir, "`"))
             idx_main_plots = findall(
                 .!isnothing.(match.(Regex("PCBiPlots"), fnames)) .||
-                .!isnothing.(
-                    match.(Regex("BarPlots-Within_population.x.trait.y.cor.z.validation_population.subset."), fnames)
-                ),
+                .!isnothing.(match.(Regex("BarPlots-Within_population.x.trait.y.cor.z.validation_population.subset."), fnames)),
             )
             println("Please find the following main plots:\n\t‣ " * join(fnames[idx_main_plots], "\n\t‣ "))
         else

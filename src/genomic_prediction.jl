@@ -265,9 +265,9 @@ function fit(input::GBInput)::Vector{String}
         end
         p = UnicodePlots.heatmap(C, title = "Correlation between allele effects")
         display(p)
-        
-        
-        
+
+
+
         # TODO: output this correlation matrix and/or heatmap plot
 
 
