@@ -351,6 +351,7 @@ function predict(input::GBInput)::String
     # input.fname_allele_effects_jld2s = GenomicBreeding.fit(input)
     # Parse input and prepare the output directory
     input.analysis = predict
+    input.maf = 0.0 # disable MAF filtering during prediction
     input.fname_out_prefix = prepareoutprefixandoutdir(input)
     fname_out_prefix = input.fname_out_prefix
     fname_allele_effects_jld2s = input.fname_allele_effects_jld2s
