@@ -699,7 +699,7 @@ function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{Stri
         genomes = slice(genomes, idx_entries = idx_entries)
     end
     # Filter genomes by maf (minimum allele frequency)
-    genomes, _omitted_loci_alleles = filter(genomes, maf)
+    genomes = filterbymaf(genomes, maf = maf)
     # Show dimensions of the input genomes and phenomes after merging and filterings
     if verbose
         println("################")
