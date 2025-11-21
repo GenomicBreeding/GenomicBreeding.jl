@@ -1,12 +1,13 @@
 name = "GenomicBreeding"
 uuid = "10ae3e88-9fae-48f7-b74d-53e776fee7da"
-authors = ["jeffersonparil@gmail.com"]
 version = "0.1.0"
+authors = ["jeffersonparil@gmail.com"]
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
 GenomicBreedingCore = "50d95318-1838-4cfa-a614-3543b4bb0509"
 GenomicBreedingIO = "f6f5bf5f-7369-4de1-9a2f-51e3ce5e0754"
 GenomicBreedingModels = "a21a2f6e-06ad-4936-9990-fa46b058b9d4"
@@ -25,6 +26,7 @@ GenomicBreedingPlots = {rev = "main", url = "https://github.com/GenomicBreeding/
 DataFrames = "1.7.0"
 Dates = "1.11.0"
 Documenter = "1.8.0"
+DocumenterTools = "0.1.21"
 GenomicBreedingCore = "0.1.0"
 GenomicBreedingIO = "0.1.0"
 GenomicBreedingModels = "0.1.0"
