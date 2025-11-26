@@ -293,7 +293,7 @@ Modules = [GenomicBreedingCore]
 --------------------------------
 
 
-2. Save the following in `GenomicBreeding.jl/docs/make.jl`
+3. Save the following in `GenomicBreeding.jl/docs/make.jl`
 
 ```julia
 push!(LOAD_PATH, "../src/")
@@ -319,12 +319,22 @@ makedocs(;
 deploydocs(; repo = "github.com/GenomicBreeding/GenomicBreeding.jl", devbranch = "main")
 ```
 
-3. Generate the docs in `GenomicBreeding.jl/docs/src`
+4. Generate the docs in `GenomicBreeding.jl/docs/src`
 
 ```shell
 cd GenomicBreeding.jl/docs
 julia --project make.jl
 ```
+
+5. Setup github pages:
+
+- Go to the repository page
+- Go to the `Settings` tab
+- On the navigation sidebar on the left, go to `Pages`
+- Under `Build and deployment` set the following:
+    + **Source**: `Deploy from a branch`
+    + **Branch**: `gh-pages` & `/(root)`
+    + Click on `Save` beside `/(root)`
 
 ### Install slurm:
 
