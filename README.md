@@ -273,7 +273,60 @@ t = Template(;
 t("GenomicBreedingPlots.jl")
 ```
 
-Install slurm:
+### Setup docs
+
+1. Copy all the dependencies from `GenomicBreeding.jl/Project.toml` into `GenomicBreeding.jl/docs/Project.toml`
+
+2. Save the following in `GenomicBreeding.jl/docs/src/index.md`
+
+--------------------------------
+# GenomicBreedingCore.jl
+
+Documentation for GenomicBreedingCore.jl
+
+```@index
+```
+
+```@autodocs
+Modules = [GenomicBreedingCore]
+```
+--------------------------------
+
+
+2. Save the following in `GenomicBreeding.jl/docs/make.jl`
+
+```julia
+push!(LOAD_PATH, "../src/")
+using GenomicBreeding
+using Documenter
+
+DocMeta.setdocmeta!(GenomicBreeding, :DocTestSetup, :(using GenomicBreeding); recursive = true)
+
+makedocs(;
+    modules = [GenomicBreeding],
+    authors = "jeffersonparil@gmail.com",
+    sitename = "GenomicBreeding.jl",
+    format = Documenter.HTML(;
+        canonical = "https://GenomicBreeding.github.io/GenomicBreeding.jl",
+        edit_link = "main",
+        assets = String[],
+    ),
+    pages = ["Home" => "index.md", "Manual" => "manual.md", "Reference" => "references.md"],
+    doctest = false,
+    checkdocs = :exports,
+)
+
+deploydocs(; repo = "github.com/GenomicBreeding/GenomicBreeding.jl", devbranch = "main")
+```
+
+3. Generate the docs in `GenomicBreeding.jl/docs/src`
+
+```shell
+cd GenomicBreeding.jl/docs
+julia --project make.jl
+```
+
+### Install slurm:
 
 ```shell
 sudo apt install slurmd slurmctld -y
@@ -333,7 +386,7 @@ sudo cat /var/log/slurm/slurmd.log
 sudo cat /var/log/slurm/slurmctld.log
 ```
 
-Install Lmod:
+### Install Lmod:
 
 ```shell
 sudo apt install lua5.4 liblua5.4-dev lmod -y
@@ -350,7 +403,7 @@ echo 'export LMOD_CMD=$HOME/lmod/8.7/libexec/lmod' >> ~/.bashrc
 echo 'export MODULEPATH="/etc/lmod/modules/"' >> ~/.bashrc
 ```
 
-Sample module file (`/etc/lmod/modules/R.lua`):
+### Sample module file (`/etc/lmod/modules/R.lua`):
 
 ```shell
 sudo chmod -R 777 /etc/lmod/modules/
@@ -367,7 +420,7 @@ EOF
 sudo chmod -R 755 /etc/lmod/modules/
 ```
 
-Test
+### Test
 
 ```shell
 module avail R
