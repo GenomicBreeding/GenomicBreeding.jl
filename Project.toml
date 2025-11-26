@@ -1,6 +1,6 @@
 name = "GenomicBreeding"
 uuid = "10ae3e88-9fae-48f7-b74d-53e776fee7da"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["jeffersonparil@gmail.com"]
 
 [deps]
@@ -34,7 +34,7 @@ GenomicBreedingPlots = "0.1.0"
 ProgressMeter = "1.10.2"
 StatsBase = "0.34.4"
 UnicodePlots = "3.7.2"
-julia = "1.11"
+julia = "1.12"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
