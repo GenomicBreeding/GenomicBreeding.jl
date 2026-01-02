@@ -233,10 +233,13 @@ function fit(input::GBInput)::Vector{String}
                     )
                 end
                 Γ, Φ = if isnothing(population)
-                    (genomes, phenomes)
+                    (genomes, slice(phenomes, idx_traits = findall(traits .== trait)))
                 else
                     idx_entries = findall(genomes.populations .== population)
-                    (slice(genomes, idx_entries = idx_entries), slice(phenomes, idx_entries = idx_entries))
+                    (
+                        slice(genomes, idx_entries = idx_entries),
+                        slice(phenomes, idx_entries = idx_entries, idx_traits = findall(traits .== trait)),
+                    )
                 end
                 model_fit = if !isnothing(match(Regex("bayes", "i"), string(model)))
                     model(genomes = Γ, phenomes = Φ, n_iter = n_iter, n_burnin = n_burnin, verbose = false)
