@@ -211,7 +211,7 @@ This is a simple human-readable string-delimited text file (tab-delimited by def
 
 | chrom | pos | all_alleles | allele | entry_1 |
 | :---- | :-- | :---------- | :----- | :------ |
-| chr_1 | 123 | A|T         | A      | 0.5     |
+| chr_1 | 123 | A\|T         | A      | 0.5     |
 
 Each column must be sorted exactly as this: starting with "**chrom**" for chromosome or scaffold name, "**pos**" for the position in bases, "**all_alleles**" for a string of reference and alternative alleles separated by pipe/s (`|`), "**allele**" for exactly one of the alleles in the previous column, and finally subsequency column names refer to the names of the entries. Values under the 5th and subsequent columns are assumed to be allele frequencies, i.e. ranges from `0.0` to `1.0`. Missing values may be encoded as any of the following:
 
