@@ -15,12 +15,3 @@ GenomicBreedingCore = {rev = "main", url = "https://github.com/GenomicBreeding/G
 GenomicBreedingIO = {rev = "main", url = "https://github.com/GenomicBreeding/GenomicBreedingIO.jl"}
 GenomicBreedingModels = {rev = "main", url = "https://github.com/GenomicBreeding/GenomicBreedingModels.jl"}
 GenomicBreedingPlots = {rev = "main", url = "https://github.com/GenomicBreeding/GenomicBreedingPlots.jl"}
-
-[compat]
-DataFrames = "1.7.0"
-GenomicBreedingCore = "0.1.0"
-GenomicBreedingIO = "0.1.0"
-GenomicBreedingModels = "0.1.0"
-GenomicBreedingPlots = "0.1.0"
-StatsBase = "0.34.4"
-julia = "1.11"

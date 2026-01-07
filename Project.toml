@@ -1,6 +1,6 @@
 name = "GenomicBreeding"
 uuid = "10ae3e88-9fae-48f7-b74d-53e776fee7da"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["jeffersonparil@gmail.com"]
 
 [deps]
@@ -27,10 +27,10 @@ DataFrames = "1.7.0"
 Dates = "1.11.0"
 Documenter = "1.8.0"
 DocumenterTools = "0.1.21"
-GenomicBreedingCore = "0.1.1"
-GenomicBreedingIO = "0.1.1"
-GenomicBreedingModels = "0.1.1"
-GenomicBreedingPlots = "0.1.1"
+GenomicBreedingCore = "0.2.0"
+GenomicBreedingIO = "0.2.0"
+GenomicBreedingModels = "0.2.0"
+GenomicBreedingPlots = "0.2.0"
 ProgressMeter = "1.10.2"
 StatsBase = "0.34.4"
 UnicodePlots = "3.7.2"
