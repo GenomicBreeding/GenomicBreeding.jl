@@ -967,7 +967,6 @@ function loadcvs(input::GBInput; min_train_size::Int64 = 10, verbose::Bool = tru
             c = readjld2(CV, fname = fname)
             # Skip folds which failed due to insufficient sizes and/or nil phenotype variance and/or training size less than 10
             if (
-                (length(c.fit.metrics) == 9) &&
                 !ismissing(c.metrics["cor"]) &&
                 !isnan(c.metrics["cor"]) &&
                 !isinf(c.metrics["cor"]) &&
