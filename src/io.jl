@@ -334,7 +334,7 @@ Returns a vector of error messages. An empty vector indicates all inputs are val
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> genomes = simulategenomes(n=300, n_populations=3, verbose=false);
 
-julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -446,7 +446,7 @@ A tuple containing:
 ```jldoctest; setup = :(using GenomicBreeding)
 julia> genomes = simulategenomes(n=300, n_populations=3, verbose=false);
 
-julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -469,7 +469,7 @@ julia> rm.([fname_geno, fname_pheno]);
 """
 function loadgenomesphenomes(input::GBInput)::Tuple{Genomes,Phenomes,Vector{String},Vector{String}}
     # genomes = simulategenomes(n=300, n_populations=3, verbose=false);
-    # trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials); rm("test-geno.tsv", force=true); rm("test-pheno.tsv", force=true);
     # fname_geno = writedelimited(genomes, fname="test-geno.tsv")
     # # fname_geno = writejld2(genomes, fname="test-geno.jld2")
@@ -754,7 +754,7 @@ The function handles special cases:
 ```jldoctest; setup = :(using GenomicBreedingCore, GenomicBreedingIO, GenomicBreeding, StatsBase)
 julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -795,7 +795,7 @@ julia> rm.([fname_geno, fname_pheno, "dummy.jld2"]);
 """
 function prepareinputs(input::GBInput)::Vector{GBInput}
     # genomes = GenomicBreedingCore.simulategenomes(n=300, n_populations=3, verbose=false);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
@@ -898,7 +898,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -1007,7 +1007,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
