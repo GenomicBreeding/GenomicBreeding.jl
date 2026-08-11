@@ -41,7 +41,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -59,7 +59,7 @@ true
 """
 function gwas(input::GBInput)::Vector{String}
     # genomes = GenomicBreedingCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end

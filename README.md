@@ -56,7 +56,7 @@ using GenomicBreeding
 import GenomicBreeding: plot, lasso, bayesa
 # Simulate genotype and phenotype data
 genomes = simulategenomes(n=300, l=1_000, n_populations=3, verbose=true)
-trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=true);
+trials, _ = simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=true);
 phenomes = extractphenomes(trials)
 fname_geno = writedelimited(genomes, fname="test-geno.tsv")
 fname_pheno = writedelimited(phenomes, fname="test-pheno.tsv")
@@ -222,6 +222,7 @@ Each column must be sorted exactly as this: starting with "**entries**" for the 
 ### REPL prelude
 
 ```shell
+julia --project=. -e 'using Pkg; Pkg.instantiate()' # For a fresh Julia installation
 julia --threads 8,1 --load test/interactive_prelude.jl
 ```
 
@@ -280,6 +281,7 @@ t("GenomicBreedingPlots.jl")
 2. Save the following in `GenomicBreeding.jl/docs/src/index.md`
 
 --------------------------------
+
 # GenomicBreedingCore.jl
 
 Documentation for GenomicBreedingCore.jl

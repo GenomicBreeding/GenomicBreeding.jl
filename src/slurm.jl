@@ -41,7 +41,7 @@ The function supports various genomic analyses including:
 using GenomicBreeding, StatsBase;
 using GenomicBreeding: cv, fit, predict, fitandpredict, gwas, ols, rigde, lasso, bayesa, bayesb, bayesc, gwasols, gwaslmm, gwasreml;
 genomes = GenomicBreeding.GenomicBreedingCore.simulategenomes(n=300, l=1_000, n_populations=3, verbose=false);
-trials, _ = GenomicBreeding.GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+trials, _ = GenomicBreeding.GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
 phenomes = extractphenomes(trials);
 fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
 fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
@@ -64,7 +64,7 @@ input_fit.analysis = fit
 outdir = submitslurmarrayjobs(input_fit);
 input_fit.fname_allele_effects_jld2s = begin
     files = readdir(outdir)
-    idx = findall(.!isnothing.(match.(Regex("-fit-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+    idx = findall(occursin.(Regex("-fit-"), files) .&& occursin.(Regex("jld2\$"), files))
     joinpath.(outdir, files[idx])
 end
 fits = loadfits(input_fit)
@@ -85,7 +85,7 @@ run(`squeue`)
 """
 function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool = false)::String
     # genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end;
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end;
@@ -220,16 +220,16 @@ function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool = false)::Strin
     ]
     # Remove the account name, partion and Julia module (use manually installed Julia) if empty
     if input.SLURM_account_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --account="), slurm_script)]
     end
     if input.SLURM_gpus == 0
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --gres=gpu:"), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --gres=gpu:"), slurm_script)]
     end
     if input.SLURM_partition_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --partition="), slurm_script)]
     end
     if input.SLURM_module_load_R_version_name == "conda"
-        idx = findall(.!isnothing.(match.(Regex("^module load conda\$"), slurm_script)))[1]
+        idx = findall(occursin.(Regex("^module load conda\$"), slurm_script))[1]
         slurm_script[idx] = string(
             "module load ",
             input.SLURM_module_load_Conda_version_name,
@@ -240,7 +240,7 @@ function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool = false)::Strin
         )
     end
     if input.SLURM_module_load_Julia_version_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^module load \$"), slurm_script)]
     end
     # Save the Slurm run file
     open(joinpath(run_outdir, "run.slurm"), "w") do file

@@ -33,7 +33,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -51,7 +51,7 @@ julia> length(fnames_cvs) == 4, length(fnames_notes) == 0
 """
 function cv(input::GBInput)::Tuple{Vector{String},Vector{String}}
     # genomes = GenomicBreedingCore.simulategenomes(n=300, l=100, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end
@@ -154,7 +154,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -172,7 +172,7 @@ true
 """
 function fit(input::GBInput)::Vector{String}
     # genomes = GenomicBreedingCore.simulategenomes(n=300, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end
@@ -241,7 +241,7 @@ function fit(input::GBInput)::Vector{String}
                         slice(phenomes, idx_entries = idx_entries, idx_traits = findall(traits .== trait)),
                     )
                 end
-                model_fit = if !isnothing(match(Regex("bayes", "i"), string(model)))
+                model_fit = if occursin(Regex("bayes", "i"), string(model))
                     model(genomes = Γ, phenomes = Φ, n_iter = n_iter, n_burnin = n_burnin, verbose = false)
                 else
                     model(genomes = Γ, phenomes = Φ, verbose = false)
@@ -314,7 +314,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
@@ -346,7 +346,7 @@ Dict{String, Int64} with 8 entries:
 """
 function predict(input::GBInput)::String
     # genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=false); genomes.populations = StatsBase.sample(string.("pop_", 1:3), length(genomes.entries), replace=true);
-    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, verbose=false);
+    # trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, verbose=false);
     # phenomes = extractphenomes(trials)
     # fname_geno = try writedelimited(genomes, fname="test-geno.tsv"); catch; rm("test-geno.tsv"); writedelimited(genomes, fname="test-geno.tsv"); end
     # fname_pheno = try writedelimited(phenomes, fname="test-pheno.tsv"); catch; rm("test-pheno.tsv"); writedelimited(phenomes, fname="test-pheno.tsv"); end
@@ -421,7 +421,7 @@ julia> genomes = GenomicBreedingCore.simulategenomes(n=300, l=1_000, verbose=fal
 
 julia> proportion_of_variance = fill(0.0, 9, 3); proportion_of_variance[1, :] .= 1.00; # 100% variance on the additive genetic effects
 
-julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_harvests=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
+julia> trials, _ = GenomicBreedingCore.simulatetrials(genomes=genomes, n_years=1, n_seasons=1, n_measurements=1, n_sites=1, n_replications=1, proportion_of_variance=proportion_of_variance, verbose=false);
 
 julia> phenomes = extractphenomes(trials);
 
