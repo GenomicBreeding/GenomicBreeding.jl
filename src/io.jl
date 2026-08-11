@@ -933,7 +933,7 @@ function loadcvs(input::GBInput; min_train_size::Int64 = 10, verbose::Bool = tru
         )
     end
     files = readdir(directory_name)
-    idx = findall(.!isnothing.(match.(Regex("-cv-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+    idx = findall(occursin.(Regex("-cv-"), files) .&& occursin.(Regex("jld2\$"), files))
     if length(idx) == 0
         throw(
             ArgumentError(

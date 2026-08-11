@@ -222,6 +222,7 @@ Each column must be sorted exactly as this: starting with "**entries**" for the 
 ### REPL prelude
 
 ```shell
+julia --project=. -e 'using Pkg; Pkg.instantiate()' # For a fresh Julia installation
 julia --threads 8,1 --load test/interactive_prelude.jl
 ```
 
@@ -280,6 +281,7 @@ t("GenomicBreedingPlots.jl")
 2. Save the following in `GenomicBreeding.jl/docs/src/index.md`
 
 --------------------------------
+
 # GenomicBreedingCore.jl
 
 Documentation for GenomicBreedingCore.jl

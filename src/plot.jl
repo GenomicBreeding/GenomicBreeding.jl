@@ -226,8 +226,8 @@ function plot(;
         if length(fnames) > 0
             println(string("Please find output plots in: `", plot_outdir, "`"))
             idx_main_plots = findall(
-                .!isnothing.(match.(Regex("PCBiPlots"), fnames)) .||
-                .!isnothing.(match.(Regex("BarPlots-Within_population.x.trait.y.cor.z.validation_population.subset."), fnames)),
+                occursin.(Regex("PCBiPlots"), fnames) .||
+                occursin.(Regex("BarPlots-Within_population.x.trait.y.cor.z.validation_population.subset."), fnames),
             )
             println("Please find the following main plots:\n\t‣ " * join(fnames[idx_main_plots], "\n\t‣ "))
         else

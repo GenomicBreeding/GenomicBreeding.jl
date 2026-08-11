@@ -64,7 +64,7 @@ input_fit.analysis = fit
 outdir = submitslurmarrayjobs(input_fit);
 input_fit.fname_allele_effects_jld2s = begin
     files = readdir(outdir)
-    idx = findall(.!isnothing.(match.(Regex("-fit-"), files)) .&& .!isnothing.(match.(Regex("jld2\$"), files)))
+    idx = findall(occursin.(Regex("-fit-"), files) .&& occursin.(Regex("jld2\$"), files))
     joinpath.(outdir, files[idx])
 end
 fits = loadfits(input_fit)
@@ -220,16 +220,16 @@ function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool = false)::Strin
     ]
     # Remove the account name, partion and Julia module (use manually installed Julia) if empty
     if input.SLURM_account_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --account="), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --account="), slurm_script)]
     end
     if input.SLURM_gpus == 0
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --gres=gpu:"), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --gres=gpu:"), slurm_script)]
     end
     if input.SLURM_partition_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^#SBATCH --partition="), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^#SBATCH --partition="), slurm_script)]
     end
     if input.SLURM_module_load_R_version_name == "conda"
-        idx = findall(.!isnothing.(match.(Regex("^module load conda\$"), slurm_script)))[1]
+        idx = findall(occursin.(Regex("^module load conda\$"), slurm_script))[1]
         slurm_script[idx] = string(
             "module load ",
             input.SLURM_module_load_Conda_version_name,
@@ -240,7 +240,7 @@ function submitslurmarrayjobs(input::GBInput; auto_proceed::Bool = false)::Strin
         )
     end
     if input.SLURM_module_load_Julia_version_name == ""
-        slurm_script = slurm_script[isnothing.(match.(Regex("^module load \$"), slurm_script))]
+        slurm_script = slurm_script[!occursin.(Regex("^module load \$"), slurm_script)]
     end
     # Save the Slurm run file
     open(joinpath(run_outdir, "run.slurm"), "w") do file

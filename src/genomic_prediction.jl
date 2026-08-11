@@ -241,7 +241,7 @@ function fit(input::GBInput)::Vector{String}
                         slice(phenomes, idx_entries = idx_entries, idx_traits = findall(traits .== trait)),
                     )
                 end
-                model_fit = if !isnothing(match(Regex("bayes", "i"), string(model)))
+                model_fit = if occursin(Regex("bayes", "i"), string(model))
                     model(genomes = Γ, phenomes = Φ, n_iter = n_iter, n_burnin = n_burnin, verbose = false)
                 else
                     model(genomes = Γ, phenomes = Φ, verbose = false)
